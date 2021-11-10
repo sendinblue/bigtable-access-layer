@@ -1,0 +1,28 @@
+{
+  "raws": {
+    "ui": "user_id"
+  },
+  "mapped": {
+    "oi": {
+      "name": "is_opted_in",
+      "values": {
+        "0": "false",
+        "1": "true"
+      }
+    }
+  },
+  "reversed": [
+    {
+      "name": "order_status",
+      "values": {
+        "1": "pending_payment",
+        "2": "failed",
+        "3": "processing",
+        "4": "completed",
+        "5": "on_hold",
+        "6": "canceled",
+        "7": "refunded"
+      }
+    }
+  ]
+}
