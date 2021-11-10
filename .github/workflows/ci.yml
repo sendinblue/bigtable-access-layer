@@ -1,0 +1,19 @@
+on: push
+jobs:
+  ci:
+    runs-on: ubuntu-20.04
+    env:
+      GO111MODULE: on
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.1'
+      - name: Run tests
+        run: go test -v -cover ./...
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: ./...
+      - name: Run Golang Linter
+        uses: golangci/golangci-lint-action@v2
