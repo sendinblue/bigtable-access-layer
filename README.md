@@ -1,1 +1,1 @@
-# go-bigtable-decipher
+# go-bigtable-access-layer
