@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-// Mapping is used to turn data extracted from Big Table into a human-readable output.
+// Mapping describes the mapping between data stored in Big Table and its human-readable representation.
 type Mapping struct {
 	// columns that are taken as there are in Big Table
 	Raws map[string]string `json:"raws"`
