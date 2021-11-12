@@ -71,3 +71,40 @@ func TestSeekMapped(t *testing.T) {
 		t.Fatal(fmt.Sprintf("value must be empty, got %s \n", val))
 	}
 }
+
+func TestReversedSeeker(t *testing.T) {
+	str := `{"reversed": [{"name": "order_status","values": {"1": "pending_payment","2": "failed"}}]}`
+	mapping, err := LoadMapping([]byte(str))
+	if err != nil {
+		log.Println(err)
+		t.Fatal("should not raise an error")
+	}
+	seeker := newReverseSeeker()
+	ok, c1, v1 := seeker.seekFromCache(mapping, "1", "")
+	if ok {
+		t.Fatal("`ok` should be false")
+	}
+	if c1 != "" {
+		t.Fatal("c1` should be empty")
+	}
+	if v1 != "" {
+		t.Fatal("v1` should be empty")
+	}
+	_, c2, v2 := seeker.seekFromMapping(mapping, "1", "")
+	if c2 != "order_status" {
+		t.Fatal("c2` should be 'order_status'")
+	}
+	if v2 != "pending_payment" {
+		t.Fatal("v2` should be 'pending_payment'")
+	}
+	ok, c1, v1 = seeker.seekFromCache(mapping, "1", "")
+	if !ok {
+		t.Fatal("`ok` should be `true`")
+	}
+	if c1 != "order_status" {
+		t.Fatal("c1` should be 'order_status'")
+	}
+	if v1 != "pending_payment" {
+		t.Fatal("v1` should be 'pending_payment'")
+	}
+}
