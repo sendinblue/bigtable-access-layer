@@ -1,11 +1,79 @@
 package mapping
 
+import (
+	"strings"
+
+	"cloud.google.com/go/bigtable"
+	"github.com/DTSL/go-bigtable-access-layer/data"
+)
+
 // Mapper is in charge of translating data from Big Table into a human-readable format.
 type Mapper struct {
 	// mapping coming from the JSON file
 	*Mapping
 	// those functions are in charge of seeking data
 	seekers []func(m *Mapping, column string, value string) (bool, string, string)
+}
+
+func NewMapper(mapping *Mapping, extraSeekers ...func(m *Mapping, column string, value string) (bool, string, string)) *Mapper {
+	rev := newReverseSeeker()
+	seekers := []func(m *Mapping, column string, value string) (bool, string, string){
+		seekRaw,
+		seekMapped,
+		rev.seekFromCache,
+		rev.seekFromMapping,
+	}
+	seekers = append(seekers, extraSeekers...)
+	return &Mapper{
+		seekers: seekers,
+		Mapping: mapping,
+	}
+}
+
+func (m *Mapper) GetMappedEvents(items []bigtable.ReadItem, withRaw bool) ([]string, []*data.Event) {
+	cols := make(map[string]bool)
+	rows := make(map[bigtable.Timestamp]map[string]string)
+	for _, item := range items {
+		col, val := m.Seek(removePrefix(item.Column), string(item.Value))
+		cols[col] = true
+		if _, ok := rows[item.Timestamp]; !ok {
+			rows[item.Timestamp] = make(map[string]string)
+		}
+		rows[item.Timestamp][col] = val
+		if withRaw {
+			rows[item.Timestamp][item.Column] = string(item.Value)
+		}
+	}
+	return processColumns(cols), processRows(rows)
+}
+
+func processColumns(cols map[string]bool) []string {
+	columns := []string{"date"}
+	for c := range cols {
+		columns = append(columns, c)
+	}
+	return columns
+}
+
+func processRows(r map[bigtable.Timestamp]map[string]string) []*data.Event {
+	lines := make([]*data.Event, 0)
+	for ts, row := range r {
+		row["date"] = ts.Time().String()
+		line := &data.Event{
+			Date: ts.Time(),
+			Cells:      row,
+		}
+		lines = append(lines, line)
+	}
+	return lines
+}
+
+func removePrefix(col string) string {
+	s := strings.Split(col, ":")
+	if len(s) > 1 {
+		return s[1]
+	}
+	return col
 }
 
 // Seek uses all `seekers` to find the appropriate mapping method and return the mapped column + value.
@@ -50,7 +118,6 @@ func seekMapped(m *Mapping, column string, value string) (bool, string, string) 
 	}
 	return false, "", ""
 }
-
 
 // cacheEntry is a cache entry for the reverse Seeker.
 type cacheEntry struct {
