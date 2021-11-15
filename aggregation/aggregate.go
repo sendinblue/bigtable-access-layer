@@ -80,19 +80,46 @@ func NewMax(column string, projection string) *Max {
 }
 
 func (m *Max) Compute(e *data.Event, events []*data.Event) *data.Event {
-	var max float64
+	e.Cells[m.projection] = selectOne(e, events, m.column, func(c, s float64) bool {
+        return c > s
+    })
+	return e
+}
+
+// Min returns the minimum value of the given column in the given group.
+type Min struct {
+	aggregate
+}
+
+func NewMin(column string, projection string) *Min {
+	return &Min{
+		aggregate: aggregate{
+			column:     column,
+			projection: projection,
+		},
+	}
+}
+
+func (m *Min) Compute(e *data.Event, events []*data.Event) *data.Event {
+	e.Cells[m.projection] = selectOne(e, events, m.column, func(c, s float64) bool {
+		return s == 0 || c < s
+	})
+	return e
+}
+
+func selectOne(e *data.Event, events []*data.Event, col string, f func(c, s float64) bool) string {
+	var selected float64
 	events = append(events, e)
 	for _, line := range events {
-		if d, ok := line.Cells[m.column]; ok {
+		if d, ok := line.Cells[col]; ok {
 			if v, err := strconv.ParseFloat(d, 64); err == nil {
-				if v > max {
-					max = v
+				if f(v, selected) {
+					selected = v
 				}
 			}
 		}
 	}
-	e.Cells[m.projection] = strconv.FormatFloat(max, 'f', -1, 64)
-	return e
+	return strconv.FormatFloat(selected, 'f', -1, 64)
 }
 
 // Average returns the average value of the given column in the given group.

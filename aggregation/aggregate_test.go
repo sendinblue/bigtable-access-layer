@@ -453,6 +453,83 @@ func TestMax_Compute(t *testing.T) {
 	comp(t, result, expected)
 }
 
+func TestMin_Compute(t *testing.T) {
+	lines := []*data.Event{
+		{
+			Date: time.Now(),
+			Cells: map[string]string{
+				"id":     "12",
+				"amount": "115",
+			},
+		},
+		{
+			Date: time.Now(),
+			Cells: map[string]string{
+				"id":     "12",
+				"amount": "120",
+			},
+		},
+		{
+			Date: time.Now(),
+			Cells: map[string]string{
+				"id":     "15",
+				"amount": "200",
+			},
+		},
+		{
+			Date: time.Now(),
+			Cells: map[string]string{
+				"id":     "12",
+				"amount": "110",
+			},
+		},
+		{
+			Date: time.Now(),
+			Cells: map[string]string{
+				"id":     "15",
+				"amount": "100",
+			},
+		},
+		{
+			Date: time.Now(),
+			Cells: map[string]string{
+				"id":     "16",
+				"amount": "900",
+			},
+		},
+	}
+
+	min := NewMin("amount", "min")
+	result := GroupByAggregate(lines, min.Compute, "id")
+	expected := map[string]*data.Event{
+		"12": {
+			Date: time.Now(),
+			Cells: map[string]string{
+				"id":     "12",
+				"amount": "110",
+				"min":    "110",
+			},
+		},
+		"15": {
+			Date: time.Now(),
+			Cells: map[string]string{
+				"id":     "15",
+				"amount": "100",
+				"min":    "100",
+			},
+		},
+		"16": {
+			Date: time.Now(),
+			Cells: map[string]string{
+				"id":     "16",
+				"amount": "900",
+				"min":    "900",
+			},
+		},
+	}
+	comp(t, result, expected)
+}
+
 func TestAggregationSet_Compute(t *testing.T) {
 	lines := []*data.Event{
 		{
