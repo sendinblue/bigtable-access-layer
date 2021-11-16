@@ -4,14 +4,14 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"github.com/DTSL/go-bigtable-access-layer/aggregation"
-	"github.com/DTSL/go-bigtable-access-layer/mapping"
 	"io"
 	"log"
 	"os"
 	"time"
 
 	"cloud.google.com/go/bigtable"
+	"github.com/DTSL/go-bigtable-access-layer/aggregation"
+	"github.com/DTSL/go-bigtable-access-layer/mapping"
 )
 
 const (
