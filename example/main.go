@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -39,6 +40,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("impossible to aggregate the events table: %v\n", err)
 	}
+	err = printTwoEvents(ctx, client, os.Stdout, tableID)
+	if err != nil {
+		log.Fatalf("impossible to print the events table: %v\n", err)
+	}
 }
 
 //go:embed mapping.json
@@ -59,20 +64,55 @@ func aggregate(ctx context.Context, client *bigtable.Client, out io.Writer, tabl
 		return err
 	}
 	mapper := mapping.NewMapper(jsonMapping)
-	for fam, items := range row {
-		_, _ = fmt.Fprintf(out, "family: %s\n", fam)
-		columns, events := mapper.GetMappedEvents(items, false)
-		_, _ = fmt.Fprintf(out, "mapped columns: %+v\n", columns)
+	jsonOutput := make(map[string]interface{})
+	for _, items := range row {
+		_, events := mapper.GetMappedEvents(items, false)
 		cnt := aggregation.NewCount("count")
 		grpDeviceEvent := aggregation.GroupByAggregate(events, cnt.Compute, "device_type", "event_type")
-		for _, result := range grpDeviceEvent {
-			_, _ = fmt.Fprintf(out, "device: %v, event: %v , count: %v\n", result.Cells["device_type"], result.Cells["event_type"], result.Cells["count"])
+		for name, result := range grpDeviceEvent {
+			jsonOutput[name] = result.Cells["count"]
 		}
 		grpEvent := aggregation.GroupByAggregate(events, cnt.Compute, "event_type")
-		for _, result := range grpEvent {
-			_, _ = fmt.Fprintf(out, "event: %v , count: %v\n", result.Cells["event_type"], result.Cells["count"])
+		for name, result := range grpEvent {
+			jsonOutput[name] = result.Cells["count"]
 		}
 	}
+	j, err := json.Marshal(jsonOutput)
+	if err != nil {
+		_,_ = fmt.Fprintf(out, "error while formatting JSON: %v. Delivering the raw content instead:\n %+v \n", err, jsonOutput)
+	}
+	_,_ = fmt.Fprintf(out, "%s\n", j)
+	return nil
+}
+
+func printTwoEvents(ctx context.Context, client *bigtable.Client, out io.Writer, table string) error {
+	tbl := client.Open(table)
+	row, err := tbl.ReadRow(ctx, "contact-3")
+	if err != nil {
+		return err
+	}
+	c, err := fs.ReadFile("mapping.json")
+	if err != nil {
+		return err
+	}
+	jsonMapping, err := mapping.LoadMapping(c)
+	if err != nil {
+		return err
+	}
+	mapper := mapping.NewMapper(jsonMapping)
+	jsonOutput := make(map[string]interface{})
+	for fam, items := range row {
+		jsonOutput["family"] = fam
+		columns, events := mapper.GetMappedEvents(items, false)
+		jsonOutput["columns"] = columns
+		events = events[:2]
+		jsonOutput["events"] = events
+	}
+	j, err := json.Marshal(jsonOutput)
+	if err != nil {
+        _,_ = fmt.Fprintf(out, "error while formatting JSON: %v. Delivering the raw content instead:\n %+v \n", err, jsonOutput)
+    }
+	_,_ = fmt.Fprintf(out, "%s\n", j)
 	return nil
 }
 
@@ -94,7 +134,7 @@ func fillTable(ctx context.Context, client *bigtable.Client, table string) error
 func generateMutations(numEvents int) []*bigtable.Mutation {
 	var data []*bigtable.Mutation
 	for i := 0; i < numEvents; i++ {
-		mod := i % 11
+		mod := i % 20
 		mut := bigtable.NewMutation()
 		t := bigtable.Time(time.Now().Add(-time.Duration(i) * time.Minute))
 		mut.Set("front", "u", t, []byte(fmt.Sprintf(urlPattern, mod)))

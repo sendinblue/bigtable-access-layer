@@ -48,4 +48,4 @@ just run `main`
 go run main.go
 ```
 
-it will insert some data in the table and then print the result of two `count` aggregations. Feel free to edit the code to see how it works and run some tests on your own.
+it will insert some data in the table and then print the result of two `count` aggregations + two mapped events. Feel free to edit the code to see how it works and run some tests on your own.
