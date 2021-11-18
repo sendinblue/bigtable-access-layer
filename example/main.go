@@ -68,11 +68,11 @@ func aggregate(ctx context.Context, client *bigtable.Client, out io.Writer, tabl
 	for _, items := range row {
 		_, events := mapper.GetMappedEvents(items, false)
 		cnt := aggregation.NewCount("count")
-		grpDeviceEvent := aggregation.GroupByAggregate(events, cnt.Compute, "device_type", "event_type")
+		grpDeviceEvent := aggregation.GroupBy(events, cnt.Compute, "device_type", "event_type")
 		for name, result := range grpDeviceEvent {
 			jsonOutput[name] = result.Cells["count"]
 		}
-		grpEvent := aggregation.GroupByAggregate(events, cnt.Compute, "event_type")
+		grpEvent := aggregation.GroupBy(events, cnt.Compute, "event_type")
 		for name, result := range grpEvent {
 			jsonOutput[name] = result.Cells["count"]
 		}

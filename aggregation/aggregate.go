@@ -6,8 +6,8 @@ import (
 	"github.com/DTSL/go-bigtable-access-layer/data"
 )
 
-// GroupBy groups lines by the given columns keeping the most recent one, thus without performing any aggregation.
-func GroupBy(events []*data.Event, columns ...string) map[string]*data.Event {
+// GetLatestBy groups lines by the given columns keeping the most recent one, thus without performing any aggregation.
+func GetLatestBy(events []*data.Event, columns ...string) map[string]*data.Event {
 	result := make(map[string]*data.Event)
 	for _, event := range events {
 		key := ""
@@ -23,8 +23,8 @@ func GroupBy(events []*data.Event, columns ...string) map[string]*data.Event {
 	return result
 }
 
-// GroupByAggregate groups lines by the given columns, performing the given aggregation function.
-func GroupByAggregate(events []*data.Event, agg func(line *data.Event, lines []*data.Event) *data.Event, columns ...string) map[string]*data.Event {
+// GroupBy groups lines by the given columns, performing the given aggregation function.
+func GroupBy(events []*data.Event, agg func(line *data.Event, lines []*data.Event) *data.Event, columns ...string) map[string]*data.Event {
 	result := make(map[string]*data.Event)
 	group := make(map[string][]*data.Event)
 	for _, event := range events {
@@ -175,20 +175,20 @@ func sum(column string, e *data.Event, events []*data.Event) float64 {
 	return total
 }
 
-// AggregationSet is a set of aggregations. It is designed to apply several aggregations to the same line.
-type AggregationSet struct {
+// Set is a set of aggregations. It is designed to apply several aggregations to the same line.
+type Set struct {
 	aggs []func(e *data.Event, events []*data.Event) *data.Event
 }
 
-func NewAggregationSet() *AggregationSet {
-	return &AggregationSet{}
+func NewAggregationSet() *Set {
+	return &Set{}
 }
 
-func (s *AggregationSet) Add(agg func(e *data.Event, events []*data.Event) *data.Event) {
+func (s *Set) Add(agg func(e *data.Event, events []*data.Event) *data.Event) {
 	s.aggs = append(s.aggs, agg)
 }
 
-func (s *AggregationSet) Compute(e *data.Event, events []*data.Event) *data.Event {
+func (s *Set) Compute(e *data.Event, events []*data.Event) *data.Event {
 	for _, agg := range s.aggs {
 		e = agg(e, events)
 	}
