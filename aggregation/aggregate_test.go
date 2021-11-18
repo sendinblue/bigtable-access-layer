@@ -53,7 +53,7 @@ func TestGroupByOne(t *testing.T) {
 		},
 	}
 
-	result := GroupBy(events, "id")
+	result := GetLatestBy(events, "id")
 	expected := map[string]*data.Event{
 		"12": events[1],
 		"15": events[4],
@@ -130,7 +130,7 @@ func TestGroupBy(t *testing.T) {
 		},
 	}
 
-	result := GroupBy(lines, "country", "city")
+	result := GetLatestBy(lines, "country", "city")
 	expected := map[string]*data.Event{
 		"francemarseille": lines[6],
 		"franceparis":     lines[1],
@@ -209,7 +209,7 @@ func TestGroupByCount(t *testing.T) {
 	}
 
 	cnt := NewCount("count")
-	result := GroupByAggregate(lines, cnt.Compute, "country")
+	result := GroupBy(lines, cnt.Compute, "country")
 	lines[4].Cells["count"] = "3"
 	lines[6].Cells["count"] = "4"
 	lines[7].Cells["count"] = "1"
@@ -269,7 +269,7 @@ func TestAverage_Compute(t *testing.T) {
 	}
 
 	avg := NewAverage("amount", "average")
-	result := GroupByAggregate(lines, avg.Compute, "id")
+	result := GroupBy(lines, avg.Compute, "id")
 	expected := map[string]*data.Event{
 		"12": {
 			Date: time.Now(),
@@ -346,7 +346,7 @@ func TestSum_Compute(t *testing.T) {
 	}
 
 	sum := NewSum("amount", "sum")
-	result := GroupByAggregate(lines, sum.Compute, "id")
+	result := GroupBy(lines, sum.Compute, "id")
 	expected := map[string]*data.Event{
 		"12": {
 			Date: time.Now(),
@@ -423,7 +423,7 @@ func TestMax_Compute(t *testing.T) {
 	}
 
 	max := NewMax("amount", "max")
-	result := GroupByAggregate(lines, max.Compute, "id")
+	result := GroupBy(lines, max.Compute, "id")
 	expected := map[string]*data.Event{
 		"12": {
 			Date: time.Now(),
@@ -500,7 +500,7 @@ func TestMin_Compute(t *testing.T) {
 	}
 
 	min := NewMin("amount", "min")
-	result := GroupByAggregate(lines, min.Compute, "id")
+	result := GroupBy(lines, min.Compute, "id")
 	expected := map[string]*data.Event{
 		"12": {
 			Date: time.Now(),
@@ -584,7 +584,7 @@ func TestAggregationSet_Compute(t *testing.T) {
 	set.Add(sum.Compute)
 	set.Add(cnt.Compute)
 
-	result := GroupByAggregate(lines, set.Compute, "id")
+	result := GroupBy(lines, set.Compute, "id")
 	expected := map[string]*data.Event{
 		"12": {
 			Date: time.Now(),
