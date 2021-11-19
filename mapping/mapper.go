@@ -48,7 +48,7 @@ func (m *Mapper) GetMappedEvents(items []bigtable.ReadItem, withRaw bool) ([]str
 }
 
 func processColumns(cols map[string]bool) []string {
-	columns := []string{"date"}
+	columns := make([]string, 0, len(cols))
 	for c := range cols {
 		columns = append(columns, c)
 	}
@@ -58,7 +58,6 @@ func processColumns(cols map[string]bool) []string {
 func processRows(r map[bigtable.Timestamp]map[string]string) []*data.Event {
 	lines := make([]*data.Event, 0)
 	for ts, row := range r {
-		row["date"] = ts.Time().String()
 		line := &data.Event{
 			Date: ts.Time(),
 			Cells:      row,
