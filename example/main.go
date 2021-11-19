@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"github.com/DTSL/go-bigtable-access-layer/repository"
 	"io"
 	"log"
 	"os"
@@ -86,11 +87,6 @@ func aggregate(ctx context.Context, client *bigtable.Client, out io.Writer, tabl
 }
 
 func printTwoEvents(ctx context.Context, client *bigtable.Client, out io.Writer, table string) error {
-	tbl := client.Open(table)
-	row, err := tbl.ReadRow(ctx, "contact-3")
-	if err != nil {
-		return err
-	}
 	c, err := fs.ReadFile("mapping.json")
 	if err != nil {
 		return err
@@ -100,13 +96,16 @@ func printTwoEvents(ctx context.Context, client *bigtable.Client, out io.Writer,
 		return err
 	}
 	mapper := mapping.NewMapper(jsonMapping)
+	repo := repository.NewRepository(client.Open(table), mapper)
+	eventSet, err := repo.Read(ctx, "contact-3")
+	if err != nil {
+        return err
+    }
 	jsonOutput := make(map[string]interface{})
-	for fam, items := range row {
+	jsonOutput["columns"] = eventSet.Columns
+	for fam, events := range eventSet.Events {
 		jsonOutput["family"] = fam
-		columns, events := mapper.GetMappedEvents(items, false)
-		jsonOutput["columns"] = columns
-		events = events[:2]
-		jsonOutput["events"] = events
+		jsonOutput["events"] = events[:2]
 	}
 	j, err := json.Marshal(jsonOutput)
 	if err != nil {

@@ -1,0 +1,24 @@
+{
+  "raws": {
+    "u": "url"
+  },
+  "mapped": {
+    "d": {
+      "name": "device_type",
+      "values": {
+        "1": "Smartphone",
+        "2": "Computer"
+      }
+    }
+  },
+  "reversed": [
+    {
+      "name": "event_type",
+      "values": {
+        "1": "page_view",
+        "2": "add_to_cart",
+        "3": "purchase"
+      }
+    }
+  ]
+}

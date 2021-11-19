@@ -184,7 +184,7 @@ func TestMapper_GetMappedEvents(t *testing.T) {
 	}
 	mapper := NewMapper(mapping)
 	cols, events := mapper.GetMappedEvents(bigtableItems, false)
-	if len(cols) != 4 {
+	if len(cols) != 3 {
 		t.Fatal("should have 3 columns")
 	}
 	if len(events) != 2 {
