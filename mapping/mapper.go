@@ -30,19 +30,19 @@ func NewMapper(mapping *Mapping, extraSeekers ...func(m *Mapping, column string,
 	}
 }
 
-func (m *Mapper) GetMappedEvents(items []bigtable.ReadItem, withRaw bool) ([]string, []*data.Event) {
+func (m *Mapper) GetMappedEvents(items []bigtable.ReadItem) ([]string, []*data.Event) {
 	cols := make(map[string]bool)
-	rows := make(map[bigtable.Timestamp]map[string]string)
+	rows := make(map[string]map[bigtable.Timestamp]map[string]string)
 	for _, item := range items {
 		col, val := m.Seek(removePrefix(item.Column), string(item.Value))
 		cols[col] = true
-		if _, ok := rows[item.Timestamp]; !ok {
-			rows[item.Timestamp] = make(map[string]string)
+		if _, ok := rows[item.Row]; !ok {
+			rows[item.Row] = make(map[bigtable.Timestamp]map[string]string)
 		}
-		rows[item.Timestamp][col] = val
-		if withRaw {
-			rows[item.Timestamp][item.Column] = string(item.Value)
+		if _, ok := rows[item.Row][item.Timestamp]; !ok {
+			rows[item.Row][item.Timestamp] = make(map[string]string)
 		}
+		rows[item.Row][item.Timestamp][col] = val
 	}
 	return processColumns(cols), processRows(rows)
 }
@@ -55,16 +55,19 @@ func processColumns(cols map[string]bool) []string {
 	return columns
 }
 
-func processRows(r map[bigtable.Timestamp]map[string]string) []*data.Event {
-	lines := make([]*data.Event, 0)
-	for ts, row := range r {
-		line := &data.Event{
-			Date: ts.Time(),
-			Cells:      row,
+func processRows(r map[string]map[bigtable.Timestamp]map[string]string) []*data.Event {
+	events := make([]*data.Event, 0)
+	for key, row := range r {
+		for ts, cells := range row {
+			event := &data.Event{
+				Date:   ts.Time(),
+				Cells:  cells,
+				RowKey: key,
+			}
+			events = append(events, event)
 		}
-		lines = append(lines, line)
 	}
-	return lines
+	return events
 }
 
 func removePrefix(col string) string {

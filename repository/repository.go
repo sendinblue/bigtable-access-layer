@@ -1,3 +1,8 @@
+// Package repository provides the Repository struct that is used to read data coming from Big Table
+// when a mapping is defined.
+// Repository.Read() takes a row key as an argument, uses its internal adapter to read the row from Big Table,
+// parses all cells contained in the row to turn it into a map of events (each one being a data.Event) and finally
+// returns the data.Set that contains all the events.
 package repository
 
 import (
@@ -11,14 +16,16 @@ import (
 type Repository struct {
 	adapter *adapter
 	mapper  *mapping.Mapper
+	maxRows int
 }
 
 func NewRepository(table *bigtable.Table, mapper *mapping.Mapper) *Repository {
 	return &Repository{
 		adapter: &adapter{
-			ReadRow: table.ReadRow,
+			ReadRow:  table.ReadRow,
+			ReadRows: table.ReadRows,
 		},
-		mapper:  mapper,
+		mapper: mapper,
 	}
 }
 
@@ -28,22 +35,93 @@ func (r *Repository) Read(ctx context.Context, key string) (*data.Set, error) {
 	if err != nil {
 		return nil, err
 	}
+	return buildEventSet([]bigtable.Row{row}, r.mapper), nil
+}
+
+func buildEventSet(rows []bigtable.Row, mapper *mapping.Mapper) *data.Set {
 	set := &data.Set{
 		Events:  make(map[string][]*data.Event),
 		Columns: make([]string, 0),
 	}
-	for family, readItem := range row {
-		cols, events := r.mapper.GetMappedEvents(readItem, false)
-		set.Events[family] = events
-		set.Columns = merge(set.Columns, cols)
+	for _, row := range rows {
+		for family, readItem := range row {
+			cols, events := mapper.GetMappedEvents(readItem)
+			set.Events[family] = events
+			set.Columns = merge(set.Columns, cols)
+		}
 	}
-	return set, nil
+	return set
+}
+
+func (r *Repository) Search(ctx context.Context, filter bigtable.Filter) (*data.Set, error) {
+	rows, err := r.search(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	resultMap := mapResult(rows, r.maxRows)
+	result := make([]bigtable.Row, 0, len(resultMap))
+	for key, row := range resultMap {
+		fullRow, err := r.adapter.ReadRow(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, filterReadItems(fullRow, row))
+	}
+	return buildEventSet(result, r.mapper), nil
+}
+
+func (r *Repository) search(ctx context.Context, filter bigtable.Filter) ([]bigtable.Row, error) {
+	var rows []bigtable.Row
+	err := r.adapter.ReadRows(ctx, bigtable.RowRange{}, func(row bigtable.Row) bool {
+		rows = append(rows, row)
+		return true
+	}, bigtable.RowFilter(filter))
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func mapResult(rows []bigtable.Row, limit int) map[string][]bigtable.Timestamp {
+	resultMap := make(map[string][]bigtable.Timestamp)
+	for i, row := range rows {
+		for _, items := range row {
+			resultMap[row.Key()] = make([]bigtable.Timestamp, 0)
+			for _, item := range items {
+				resultMap[row.Key()] = append(resultMap[row.Key()], item.Timestamp)
+			}
+		}
+		if i > limit {
+			return resultMap
+		}
+	}
+	return resultMap
+}
+
+func filterReadItems(row bigtable.Row, ts []bigtable.Timestamp) map[string][]bigtable.ReadItem {
+	result := make(map[string][]bigtable.ReadItem)
+	timestamps := make(map[bigtable.Timestamp]bool, len(ts))
+	for _, t := range ts {
+		timestamps[t] = true
+	}
+	for fam, items := range row {
+		if result[fam] == nil {
+			result[fam] = make([]bigtable.ReadItem, 0)
+		}
+		for _, item := range items {
+			if _, ok := timestamps[item.Timestamp]; ok {
+				result[fam] = append(result[fam], item)
+			}
+		}
+	}
+	return result
 }
 
 // adapter acts as a proxy between the repository and the actual data source.
-// It always to easily mock the data source in tests.
+// It allows to easily mock the data source in tests.
 type adapter struct {
-	ReadRow func(ctx context.Context, row string, opts ...bigtable.ReadOption) (bigtable.Row, error)
+	ReadRow  func(ctx context.Context, row string, opts ...bigtable.ReadOption) (bigtable.Row, error)
+	ReadRows func(ctx context.Context, arg bigtable.RowSet, f func(bigtable.Row) bool, opts ...bigtable.ReadOption) (err error)
 }
 
 // merge returns a new slice with the contents of both slices.
