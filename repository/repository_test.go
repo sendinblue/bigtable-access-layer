@@ -10,7 +10,12 @@ import (
 	"github.com/DTSL/go-bigtable-access-layer/mapping"
 )
 
+var t1 = bigtable.Time(time.Date(2020, time.January, 1, 0, 1, 0, 0, time.UTC))
+var t2 = bigtable.Time(time.Date(2020, time.January, 1, 0, 2, 0, 0, time.UTC))
+var t3 = bigtable.Time(time.Date(2020, time.January, 1, 0, 3, 0, 0, time.UTC))
+
 func TestRepository_Read(t *testing.T) {
+
 	ctx := context.Background()
 	adapter := &adapter{
 		ReadRow: mockReadRow,
@@ -26,7 +31,6 @@ func TestRepository_Read(t *testing.T) {
 	if len(eventSet.Events) != 1 {
 		t.Fatalf("expected 1 event family, got %d", len(eventSet.Events))
 	}
-	t1 := time.Now().Add(-time.Duration(3) * time.Minute)
 	if v, ok := eventSet.Events["front"]; !ok {
 		t.Fatalf("expected front family, got %v", v)
 	} else {
@@ -45,8 +49,8 @@ func TestRepository_Read(t *testing.T) {
 		if v[0].Cells["event_type"] != "page_view" {
 			t.Fatalf("page_view, got %s", v[0].Cells["event_type"])
 		}
-		if v[0].Date.Unix() != t1.Unix() {
-			t.Fatalf("expected %v, got %v", t1, v[0].Date)
+		if v[0].Date.Unix() != t1.Time().Unix() {
+			t.Fatalf("expected %v, got %v", t1.Time().Unix(), v[0].Date.Unix())
 		}
 	}
 }
@@ -66,11 +70,9 @@ func TestRepository_Search(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read: %v", err)
 	}
-
 	if len(eventSet.Events) != 1 {
 		t.Fatalf("expected 1 event family, got %d", len(eventSet.Events))
 	}
-	t1 := time.Now().Add(-time.Duration(3) * time.Minute)
 	if v, ok := eventSet.Events["front"]; !ok {
 		t.Fatalf("expected front family, got %v", v)
 	} else {
@@ -86,8 +88,8 @@ func TestRepository_Search(t *testing.T) {
 		if v[0].Cells["event_type"] != "page_view" {
 			t.Fatalf("page_view, got %s", v[0].Cells["event_type"])
 		}
-		if v[0].Date.Unix() != t1.Unix() {
-			t.Fatalf("expected %v, got %v", t1, v[0].Date)
+		if v[0].Date.Unix() != t1.Time().Unix() {
+			t.Fatalf("expected %v, got %v", t1.Time().Unix(), v[0].Date.Unix())
 		}
 	}
 
@@ -113,10 +115,6 @@ func mockReadRows(_ context.Context, _ bigtable.RowSet, f func(bigtable.Row) boo
 	}
 	return nil
 }
-
-var t1 = bigtable.Time(time.Now().Add(-time.Duration(3) * time.Minute))
-var t2 = bigtable.Time(time.Now().Add(-time.Duration(2) * time.Minute))
-var t3 = bigtable.Time(time.Now().Add(-time.Duration(1) * time.Minute))
 
 func getRows() []bigtable.Row {
 	return []bigtable.Row{
