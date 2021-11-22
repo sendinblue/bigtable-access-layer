@@ -37,6 +37,7 @@ func TestRepository_Read(t *testing.T) {
 		if len(v) != 3 {
 			t.Fatalf("expected 3 events, got %d", len(v))
 		}
+
 		if v[0].RowKey != "contact-3" {
             t.Fatalf("expected contact-3, got %s", v[0].RowKey)
         }
@@ -46,12 +47,25 @@ func TestRepository_Read(t *testing.T) {
 		if v[0].Cells["device_type"] != "Smartphone" {
 			t.Fatalf("expected Smartphone, got %s", v[0].Cells["device_type"])
 		}
-		if v[0].Cells["event_type"] != "page_view" {
-			t.Fatalf("page_view, got %s", v[0].Cells["event_type"])
-		}
-		if v[0].Date.Unix() != t1.Time().Unix() {
-			t.Fatalf("expected %v, got %v", t1.Time().Unix(), v[0].Date.Unix())
-		}
+		// here we're testing each event_type depending on the timestamp.
+		// It's because Go doesn't guarantee the order of the map iteration
+		for _, event := range v {
+			if event.Date.Unix() == t1.Time().Unix() {
+				if event.Cells["event_type"] != "page_view" {
+                    t.Fatalf("expected page_view, got %s", event.Cells["event_type"])
+                }
+			}
+			if event.Date.Unix() == t2.Time().Unix() {
+				if event.Cells["event_type"] != "add_to_cart" {
+					t.Fatalf("expected add_to_cart, got %s", event.Cells["event_type"])
+				}
+			}
+			if event.Date.Unix() == t3.Time().Unix() {
+				if event.Cells["event_type"] != "purchase" {
+					t.Fatalf("expected purchase, got %s", event.Cells["event_type"])
+				}
+			}
+        }
 	}
 }
 
@@ -85,11 +99,22 @@ func TestRepository_Search(t *testing.T) {
 		if v[0].Cells["device_type"] != "Smartphone" {
 			t.Fatalf("expected Smartphone, got %s", v[0].Cells["device_type"])
 		}
-		if v[0].Cells["event_type"] != "page_view" {
-			t.Fatalf("page_view, got %s", v[0].Cells["event_type"])
-		}
-		if v[0].Date.Unix() != t1.Time().Unix() {
-			t.Fatalf("expected %v, got %v", t1.Time().Unix(), v[0].Date.Unix())
+		for _, event := range v {
+			if event.Date.Unix() == t1.Time().Unix() {
+				if event.Cells["event_type"] != "page_view" {
+					t.Fatalf("expected page_view, got %s", event.Cells["event_type"])
+				}
+			}
+			if event.Date.Unix() == t2.Time().Unix() {
+				if event.Cells["event_type"] != "add_to_cart" {
+					t.Fatalf("expected add_to_cart, got %s", event.Cells["event_type"])
+				}
+			}
+			if event.Date.Unix() == t3.Time().Unix() {
+				if event.Cells["event_type"] != "purchase" {
+					t.Fatalf("expected purchase, got %s", event.Cells["event_type"])
+				}
+			}
 		}
 	}
 
@@ -178,9 +203,9 @@ func mockReadRow(_ context.Context, row string, _ ...bigtable.ReadOption) (bigta
 			},
 			{
 				Row:       row,
-				Column:    "1",
+				Column:    "2",
 				Timestamp: t2,
-				Value:     []byte("2"),
+				Value:     []byte("1"),
 			},
 			{
 				Row:       row,
@@ -196,9 +221,9 @@ func mockReadRow(_ context.Context, row string, _ ...bigtable.ReadOption) (bigta
 			},
 			{
 				Row:       row,
-				Column:    "1",
+				Column:    "3",
 				Timestamp: t3,
-				Value:     []byte("3"),
+				Value:     []byte("1"),
 			},
 		},
 	}
