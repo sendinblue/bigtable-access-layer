@@ -1,6 +1,9 @@
 package rowkey
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestDetectIsInteger(t *testing.T) {
 	tests := []struct {
@@ -44,14 +47,15 @@ func TestBuilder_ToRowKey(t *testing.T) {
 	}
 }
 
-func TestNewBuilder(t *testing.T) {
+func ExampleNewBuilder() {
 	sepOpt := NewSeparatorOption(":")
 	processOpt := NewProcessOption(func(s string) string {
 		return s
 	})
 	b := NewBuilder(sepOpt, processOpt)
 	key := b.ToRowKey("1234", "john")
-	if key != "1234:john" {
-        t.Errorf("ToRowKey(\"1234\", \"john\") = %s, want \"1234:john\"", key)
-    }
+	fmt.Println(key)
+
+	// Output:
+	// 1234:john
 }
