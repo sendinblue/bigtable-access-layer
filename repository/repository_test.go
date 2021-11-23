@@ -3,12 +3,51 @@ package repository
 import (
 	"context"
 	"embed"
+	"fmt"
+	"log"
 	"testing"
 	"time"
 
 	"cloud.google.com/go/bigtable"
+	"cloud.google.com/go/bigtable/bttest"
 	"github.com/DTSL/go-bigtable-access-layer/mapping"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
 )
+
+const (
+	projectID = "project-id"
+	instance     = "instance-id"
+	table        = "ecommerce_events"
+	columnFamily = "front"
+)
+
+
+func ExampleRepository_Read() {
+	ctx := context.Background()
+	client := getBigTableClient(ctx)
+	c, err := fs.ReadFile("testdata/mapping.json")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	jsonMapping, err := mapping.LoadMapping(c)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	mapper := mapping.NewMapper(jsonMapping)
+	tbl := client.Open(table)
+
+	repo := NewRepository(tbl, mapper)
+	eventSet, err := repo.Read(ctx, "contact-3")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	fmt.Println(eventSet.Events["front"][0].Cells["event_type"])
+
+	// Output:
+	// page_view
+}
 
 var t1 = bigtable.Time(time.Date(2020, time.January, 1, 0, 1, 0, 0, time.UTC))
 var t2 = bigtable.Time(time.Date(2020, time.January, 1, 0, 2, 0, 0, time.UTC))
@@ -228,4 +267,71 @@ func mockReadRow(_ context.Context, row string, _ ...bigtable.ReadOption) (bigta
 		},
 	}
 	return output, nil
+}
+
+func getBigTableClient(ctx context.Context) *bigtable.Client {
+	srv, err := bttest.NewServer("localhost:0")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	conn, err := grpc.Dial(srv.Addr, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalln(err)
+	}
+	adminClient, err := bigtable.NewAdminClient(ctx, projectID, instance, option.WithGRPCConn(conn))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if err = adminClient.CreateTable(ctx, table); err != nil {
+		log.Fatalln(err)
+	}
+	if err = adminClient.CreateColumnFamily(ctx, table, columnFamily); err != nil {
+		log.Fatalln(err)
+	}
+
+	client, err := bigtable.NewClient(ctx, projectID, instance, option.WithGRPCConn(conn))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	err = fillTable(ctx, client, table)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return client
+}
+
+func fillTable(ctx context.Context, client *bigtable.Client, t string) error {
+	tbl := client.Open(t)
+	numContacts := 10
+	for i := 0; i < numContacts; i++ {
+		row := fmt.Sprintf("contact-%d", i+1)
+		mutations := generateMutations(100)
+		for _, m := range mutations {
+			if err := tbl.Apply(ctx, row, m); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func generateMutations(numEvents int) []*bigtable.Mutation {
+	var data []*bigtable.Mutation
+	for i := 0; i < numEvents; i++ {
+		mod := i % 20
+		mut := bigtable.NewMutation()
+		t := bigtable.Time(time.Now().Add(-time.Duration(i) * time.Minute))
+		mut.Set("front", "u", t, []byte(fmt.Sprintf("https://www.example.com/products/%d", mod)))
+		switch mod {
+		case 1, 2:
+			mut.Set("front", "2", t, []byte("1"))
+		case 3:
+			mut.Set("front", "3", t, []byte("1"))
+		default:
+			mut.Set("front", "1", t, []byte("1"))
+		}
+		mut.Set("front", "d", t, []byte(fmt.Sprintf("%d", 1+(i%2))))
+		data = append(data, mut)
+	}
+	return data
 }
