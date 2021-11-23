@@ -37,6 +37,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("impossible to fill the events table: %v\n", err)
 	}
+	err = readAndUseMapping(ctx, client, os.Stdout, tableID)
+	if err != nil {
+		log.Fatalf("impossible to read the events table: %v\n", err)
+	}
 	err = aggregate(ctx, client, os.Stdout, tableID)
 	if err != nil {
 		log.Fatalf("impossible to aggregate the events table: %v\n", err)
@@ -49,6 +53,32 @@ func main() {
 
 //go:embed mapping.json
 var fs embed.FS
+
+func readAndUseMapping(ctx context.Context, client *bigtable.Client, out io.Writer, table string) error {
+	tbl := client.Open(table)
+	row, err := tbl.ReadRow(ctx, "contact-3")
+	if err != nil {
+		return err
+	}
+	c, err := fs.ReadFile("mapping.json")
+	if err != nil {
+		return err
+	}
+	jsonMapping, err := mapping.LoadMapping(c)
+	if err != nil {
+		return err
+	}
+	mapper := mapping.NewMapper(jsonMapping)
+	for family, items := range row {
+		fmt.Fprintf(out, "processing family: %s\n", family)
+		cols, events := mapper.GetMappedEvents(items)
+		fmt.Fprintf(out, "Columns: %+v\n", cols)
+		for _, event := range events {
+            fmt.Fprintf(out, "Event: %+v\n", event)
+        }
+	}
+	return nil
+}
 
 func aggregate(ctx context.Context, client *bigtable.Client, out io.Writer, table string) error {
 	tbl := client.Open(table)
