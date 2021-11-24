@@ -5,6 +5,41 @@ import (
 	"testing"
 )
 
+func ExampleNewBuilder() {
+	sepOpt := NewSeparatorOption(":")
+	processOpt := NewProcessOption(func(s string) string {
+		return s
+	})
+	b := NewBuilder(sepOpt, processOpt)
+	key := b.ToRowKey("1234", "john")
+	fmt.Println(key)
+
+	// Output:
+	// 1234:john
+}
+
+func ExampleReverse() {
+	processOpt := NewProcessOption(Reverse)
+	// we explicitly tell the builder to use the `Reverse` function to process each part of the key
+	b := NewBuilder(processOpt)
+	key := b.ToRowKey("1234", "john")
+	fmt.Println(key)
+
+	// Output:
+	// 4321#nhoj
+}
+
+func ExampleReverseIfInteger() {
+	processOpt := NewProcessOption(ReverseIfInteger)
+	// we explicitly tell the builder to use the `ReverseIfInteger` function to process each part of the key
+	b := NewBuilder(processOpt)
+	key := b.ToRowKey("1234", "john")
+	fmt.Println(key)
+
+	// Output:
+	// 4321#john
+}
+
 func TestDetectIsInteger(t *testing.T) {
 	tests := []struct {
         input  string
@@ -45,17 +80,4 @@ func TestBuilder_ToRowKey(t *testing.T) {
 	if key != "54321#john.doe@example.org" {
 		t.Errorf("ToRowKey(\"12345\", \"john.doe@example.org\") = %s, want \"54321#john.doe@example.org\"", key)
 	}
-}
-
-func ExampleNewBuilder() {
-	sepOpt := NewSeparatorOption(":")
-	processOpt := NewProcessOption(func(s string) string {
-		return s
-	})
-	b := NewBuilder(sepOpt, processOpt)
-	key := b.ToRowKey("1234", "john")
-	fmt.Println(key)
-
-	// Output:
-	// 1234:john
 }

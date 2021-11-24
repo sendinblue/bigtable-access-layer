@@ -1,3 +1,13 @@
+/*
+Package aggregation provides aggregation functions to group events as if we were using SQL statement such as GROUP BY.
+ */
+/*
+Two main functions are provided:
+ - GetLatestBy to get the latest event for each group. A group is defined by one or more columns.
+ - GroupBy to group events by one or more columns and perform an aggregation for each group, like count(), sum() or max().
+It is possible to use a single aggregation when calling GroupBy or to use multiple ones thanks to aggregation.Set.
+Please see the examples to see how to use the aggregators.
+*/
 package aggregation
 
 import (

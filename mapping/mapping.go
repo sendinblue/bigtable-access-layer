@@ -1,3 +1,54 @@
+/*
+Package mapping provides the API to convert data coming from Big Table into a data.Set.
+ */
+/*
+The mapping system is based on a set of rules described inside a JSON mapping file, here's an example:
+	{
+	  "raws": {
+		"ui": "user_id"
+	  },
+	  "mapped": {
+		"oi": {
+		  "name": "is_opted_in",
+		  "values": {
+			"0": "false",
+			"1": "true"
+		  }
+		}
+	  },
+	  "reversed": [
+		{
+		  "name": "order_status",
+		  "values": {
+			"1": "pending_payment",
+			"2": "failed",
+			"3": "processing",
+			"4": "completed",
+			"5": "on_hold",
+			"6": "canceled",
+			"7": "refunded"
+		  }
+		}
+	  ]
+	}
+The mapping has 3 sections:
+  - raws: only the column qualifier is translated from its short version to a meaningful name.
+  - mapped: the column qualifier is translated from its short version to a meaningful name, and the value is translated from its short-value to the full value.
+  - reversed: the column qualifier contains the real data which is mapped to a value as described in the "values" property and the column name is taken from the "name" attribute.
+
+Considering the mapping above, let's say we have a row with the following data coming from Big Table:
+    {
+      "ui": "12345",
+      "oi": "1",
+      "3": "1"
+    }
+The mapping system will map it to a new data.Event containing the following data:
+    {
+      "user_id": "12345",
+      "is_opted_in": "true",
+      "order_status": "completed"
+    }
+ */
 package mapping
 
 import (

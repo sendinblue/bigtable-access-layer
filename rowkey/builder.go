@@ -1,3 +1,6 @@
+/*
+Package rowkey provides a simple way to build row keys. It's mostly useful when there's a need to reverse digits numeric identifiers.
+ */
 package rowkey
 
 import (
@@ -30,6 +33,7 @@ func (b *Builder) ToRowKey(parts ...string) string {
 	return strings.Join(parts, b.separator)
 }
 
+// ReverseIfInteger reverses the digits of a string if it's a numeric form. "Plain strings" won't be impacted.
 func ReverseIfInteger(s string) string {
     if detectIsInteger(s) {
         return Reverse(s)
@@ -42,6 +46,7 @@ func detectIsInteger(part string) bool {
     return err == nil
 }
 
+// Reverse reverses all characters in a string so the first becomes the last and so on.
 func Reverse(s string) string {
 	r := []rune(s)
 	for i, j := 0, len(r)-1; i < len(r)/2; i, j = i+1, j-1 {

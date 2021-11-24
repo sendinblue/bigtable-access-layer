@@ -1,11 +1,120 @@
 package aggregation
 
 import (
+	"cloud.google.com/go/bigtable"
+	"cloud.google.com/go/bigtable/bttest"
+	"context"
+	"fmt"
+	"github.com/DTSL/go-bigtable-access-layer/mapping"
+	"github.com/DTSL/go-bigtable-access-layer/repository"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/DTSL/go-bigtable-access-layer/data"
 )
+
+const (
+	projectID = "project-id"
+	instance     = "instance-id"
+	table        = "ecommerce_events"
+	columnFamily = "front"
+)
+
+var jMapping = `
+{
+  "raws": {
+    "u": "url",
+    "a": "amount"
+  },
+  "mapped": {
+    "d": {
+      "name": "device_type",
+      "values": {
+        "1": "Smartphone",
+        "2": "Computer"
+      }
+    }
+  },
+  "reversed": [
+    {
+      "name": "event_type",
+      "values": {
+        "1": "page_view",
+        "2": "add_to_cart",
+        "3": "purchase"
+      }
+    }
+  ]
+}
+`
+
+func ExampleGetLatestBy() {
+	ctx := context.Background()
+	client := getBigTableClient(ctx)
+	jsonMapping, err := mapping.LoadMapping([]byte(jMapping))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	mapper := mapping.NewMapper(jsonMapping)
+	tbl := client.Open(table)
+
+	repo := repository.NewRepository(tbl, mapper)
+	eventSet, err := repo.Read(ctx, "contact-3")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	latest := GetLatestBy(eventSet.Events["front"], "device_type")
+
+	// we prefer to access each event individually as it's impossible to predict the order in which the events will be returned
+	fmt.Println(latest["Computer"].Date)
+	fmt.Println(latest["Computer"].Cells["device_type"])
+	fmt.Println(latest["Smartphone"].Date)
+	fmt.Println(latest["Smartphone"].Cells["device_type"])
+
+	// Output:
+	// 1970-01-01 02:39:00 +0100 CET
+	// Computer
+	// 1970-01-01 02:38:00 +0100 CET
+	// Smartphone
+}
+
+func ExampleGroupBy() {
+	ctx := context.Background()
+	client := getBigTableClient(ctx)
+	jsonMapping, err := mapping.LoadMapping([]byte(jMapping))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	mapper := mapping.NewMapper(jsonMapping)
+	tbl := client.Open(table)
+
+	repo := repository.NewRepository(tbl, mapper)
+	eventSet, err := repo.Read(ctx, "contact-3")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	cnt := NewCount("count")
+	total := NewSum("amount", "total_amount")
+
+	set := NewAggregationSet()
+	set.Add(cnt.Compute)
+	set.Add(total.Compute)
+	grouped := GroupBy(eventSet.Events["front"], set.Compute, "device_type", "event_type")
+
+	fmt.Println(grouped["Computerpurchase"].Cells["device_type"])
+	fmt.Println(grouped["Computerpurchase"].Cells["event_type"])
+	fmt.Println(grouped["Computerpurchase"].Cells["count"])
+	fmt.Println(grouped["Computerpurchase"].Cells["total_amount"])
+
+	// Output:
+	// Computer
+	// purchase
+	// 5
+	// 150
+}
 
 func TestGroupByOne(t *testing.T) {
 	events := []*data.Event{
@@ -638,4 +747,72 @@ func comp(t *testing.T, result, expected map[string]*data.Event) {
 			}
 		}
 	}
+}
+
+func getBigTableClient(ctx context.Context) *bigtable.Client {
+	srv, err := bttest.NewServer("localhost:0")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	conn, err := grpc.Dial(srv.Addr, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalln(err)
+	}
+	adminClient, err := bigtable.NewAdminClient(ctx, projectID, instance, option.WithGRPCConn(conn))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if err = adminClient.CreateTable(ctx, table); err != nil {
+		log.Fatalln(err)
+	}
+	if err = adminClient.CreateColumnFamily(ctx, table, columnFamily); err != nil {
+		log.Fatalln(err)
+	}
+
+	client, err := bigtable.NewClient(ctx, projectID, instance, option.WithGRPCConn(conn))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	err = fillTable(ctx, client, table)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return client
+}
+
+func fillTable(ctx context.Context, client *bigtable.Client, t string) error {
+	tbl := client.Open(t)
+	numContacts := 10
+	for i := 0; i < numContacts; i++ {
+		row := fmt.Sprintf("contact-%d", i+1)
+		mutations := generateMutations(100)
+		for _, m := range mutations {
+			if err := tbl.Apply(ctx, row, m); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func generateMutations(numEvents int) []*bigtable.Mutation {
+	var mutations []*bigtable.Mutation
+	for i := 0; i < numEvents; i++ {
+		mod := i % 20
+		mut := bigtable.NewMutation()
+		t := bigtable.Time(time.UnixMilli(0).Add(time.Duration(i) * time.Minute))
+		mut.Set("front", "u", t, []byte(fmt.Sprintf("https://www.example.com/products/%d", mod)))
+		switch mod {
+		case 1, 2:
+			mut.Set("front", "2", t, []byte("1"))
+		case 3:
+			mut.Set("front", "3", t, []byte("1"))
+		default:
+			mut.Set("front", "1", t, []byte("1"))
+		}
+		mut.Set("front", "a", t, []byte(fmt.Sprintf("%d", mod * 10)))
+		mut.Set("front", "d", t, []byte(fmt.Sprintf("%d", 1+(i%2))))
+		mutations = append(mutations, mut)
+	}
+	return mutations
 }

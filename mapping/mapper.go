@@ -30,6 +30,10 @@ func NewMapper(mapping *Mapping, extraSeekers ...func(m *Mapping, column string,
 	}
 }
 
+// GetMappedEvents translates a slice of bigtable.ReadItem into a slice of data.Event.
+// It uses the Mapping to know which columns to seek and each event is identified by the timestamp
+// of the bigtable.ReadItem. So assuming there's a slice of 20 bigtable.ReadItem with the same timestamp,
+// then the returned slice will have 1 data.Event containing a slice of 20 Cells.
 func (m *Mapper) GetMappedEvents(items []bigtable.ReadItem) ([]string, []*data.Event) {
 	cols := make(map[string]bool)
 	rows := make(map[string]map[bigtable.Timestamp]map[string]string)

@@ -1,8 +1,4 @@
-// Package repository provides the Repository struct that is used to read data coming from Big Table
-// when a mapping is defined.
-// Repository.Read() takes a row key as an argument, uses its internal adapter to read the row from Big Table,
-// parses all cells contained in the row to turn it into a map of events (each one being a data.Event) and finally
-// returns the data.Set that contains all the events.
+// Package repository provides the Repository struct that is used to read data coming from Big Table  when a mapping is defined.
 package repository
 
 import (
@@ -19,6 +15,7 @@ type Repository struct {
 	maxRows int
 }
 
+// NewRepository creates a new Repository for the given table.
 func NewRepository(table *bigtable.Table, mapper *mapping.Mapper) *Repository {
 	return &Repository{
 		adapter: &adapter{
@@ -29,7 +26,12 @@ func NewRepository(table *bigtable.Table, mapper *mapping.Mapper) *Repository {
 	}
 }
 
-// Read a row from the repository and map it to a data.Set
+/*
+Read a row from the repository and map it to a data.Set
+
+This method takes a row key as an argument, uses its internal adapter to read the row from Big Table,
+parses all cells contained in the row to turn it into a map of data.Event and finally returns the data.Set that contains all the events.
+*/
 func (r *Repository) Read(ctx context.Context, key string) (*data.Set, error) {
 	row, err := r.adapter.ReadRow(ctx, key)
 	if err != nil {
@@ -53,6 +55,7 @@ func buildEventSet(rows []bigtable.Row, mapper *mapping.Mapper) *data.Set {
 	return set
 }
 
+// Search for rows in the repository that match the given filter and return the according data.Set
 func (r *Repository) Search(ctx context.Context, filter bigtable.Filter) (*data.Set, error) {
 	rows, err := r.search(ctx, filter)
 	if err != nil {
