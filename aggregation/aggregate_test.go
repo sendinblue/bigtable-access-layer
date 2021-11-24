@@ -69,15 +69,15 @@ func ExampleGetLatestBy() {
 	latest := GetLatestBy(eventSet.Events["front"], "device_type")
 
 	// we prefer to access each event individually as it's impossible to predict the order in which the events will be returned
-	fmt.Println(latest["Computer"].Date.Format(time.RFC3339))
+	fmt.Println(latest["Computer"].Date.UTC())
 	fmt.Println(latest["Computer"].Cells["device_type"])
-	fmt.Println(latest["Smartphone"].Date.Format(time.RFC3339))
+	fmt.Println(latest["Smartphone"].Date.UTC())
 	fmt.Println(latest["Smartphone"].Cells["device_type"])
 
 	// Output:
-	// 1970-01-01T02:39:00+01:00
+	// 1970-01-01 01:39:00 +0000 UTC
 	// Computer
-	// 1970-01-01T02:38:00+01:00
+	// 1970-01-01 01:38:00 +0000 UTC
 	// Smartphone
 }
 
