@@ -1,5 +1,9 @@
 # go-bigtable-access-layer
 
+[![Maintainability](https://api.codeclimate.com/v1/badges/e06e7c0df20da7a298fc/maintainability)](https://codeclimate.com/repos/619e604df3947401b701334c/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/e06e7c0df20da7a298fc/test_coverage)](https://codeclimate.com/repos/619e604df3947401b701334c/test_coverage)
+
+
 `go-bigtable-access-layer` is a library designed to ease reading data from Big Table. it features:
 
 - cells grouping to build events using the timestamp
