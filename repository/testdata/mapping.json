@@ -15,9 +15,9 @@
     {
       "name": "event_type",
       "values": {
-        "1": "page_view",
-        "2": "add_to_cart",
-        "3": "purchase"
+        "11": "page_view",
+        "12": "add_to_cart",
+        "13": "purchase"
       }
     }
   ]

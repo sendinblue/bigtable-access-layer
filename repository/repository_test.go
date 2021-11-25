@@ -10,6 +10,7 @@ import (
 
 	"cloud.google.com/go/bigtable"
 	"cloud.google.com/go/bigtable/bttest"
+	"github.com/DTSL/go-bigtable-access-layer/data"
 	"github.com/DTSL/go-bigtable-access-layer/mapping"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
@@ -47,6 +48,121 @@ func ExampleRepository_Read() {
 
 	// Output:
 	// page_view
+}
+
+func ExampleRepository_Write() {
+	ctx := context.Background()
+	client := getBigTableClient(ctx)
+	c, err := fs.ReadFile("testdata/mapping.json")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	jsonMapping, err := mapping.LoadMapping(c)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	mapper := mapping.NewMapper(jsonMapping)
+	tbl := client.Open(table)
+
+	repo := NewRepository(tbl, mapper)
+	eventSet := &data.Set{Events: map[string][]*data.Event{
+		"front": {
+            {
+				RowKey: "contact-101",
+				Date: time.Date(2018, time.January, 1, 0, 0, 0, 0, time.UTC),
+                Cells: map[string]string{
+                    "event_type": "page_view",
+                    "device_type":  "Smartphone",
+					"url": "https://example.org/some/product",
+                },
+            },
+			{
+				RowKey: "contact-101",
+				Date: time.Date(2018, time.January, 1, 0, 1, 0, 0, time.UTC),
+				Cells: map[string]string{
+					"event_type": "add_to_cart",
+					"device_type":  "Smartphone",
+					"url": "https://example.org/some/product",
+				},
+			},
+			{
+				RowKey: "contact-101",
+				Date: time.Date(2018, time.January, 1, 0, 2, 0, 0, time.UTC),
+				Cells: map[string]string{
+					"event_type": "purchase",
+					"device_type":  "Smartphone",
+					"url": "https://example.org/some/product",
+				},
+			},
+			{
+				RowKey: "contact-102",
+				Date: time.Date(2018, time.January, 1, 0, 2, 0, 0, time.UTC),
+				Cells: map[string]string{
+					"event_type": "add_to_cart",
+					"device_type":  "Computer",
+					"url": "https://example.org/some/product",
+				},
+			},
+        },
+	}}
+
+	errs, err := repo.Write(ctx, eventSet)
+	if err != nil {
+        log.Fatalln(err)
+    }
+	if len(errs) > 0 {
+		log.Fatalln(errs)
+	}
+
+	row, err := tbl.ReadRow(ctx, "contact-101")
+	if err != nil {
+        log.Fatalln(err)
+    }
+	for _, family := range row {
+        for _, cell := range family {
+            fmt.Println(cell.Column, string(cell.Value))
+        }
+    }
+
+	row, err = tbl.ReadRow(ctx, "contact-102")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	for _, family := range row {
+		for _, cell := range family {
+			fmt.Println(cell.Column, string(cell.Value))
+		}
+	}
+
+	readSet, err := repo.Read(ctx, "contact-102")
+	if err != nil {
+        log.Fatalln(err)
+    }
+	for _, event := range readSet.Events["front"] {
+		fmt.Println(event.Date.UTC())
+		fmt.Println(event.RowKey)
+		fmt.Println(event.Cells["event_type"])
+		fmt.Println(event.Cells["device_type"])
+    }
+
+	// Output:
+	// front:11 1
+	// front:12 1
+	// front:13 1
+	// front:d 1
+	// front:d 1
+	// front:d 1
+	// front:u https://example.org/some/product
+	// front:u https://example.org/some/product
+	// front:u https://example.org/some/product
+	// front:12 1
+	// front:d 2
+	// front:u https://example.org/some/product
+	// 2018-01-01 00:02:00 +0000 UTC
+	// contact-102
+	// add_to_cart
+	// Computer
+
 }
 
 var t1 = bigtable.Time(time.Date(2020, time.January, 1, 0, 1, 0, 0, time.UTC))
@@ -224,7 +340,7 @@ func mockReadRow(_ context.Context, row string, _ ...bigtable.ReadOption) (bigta
 			},
 			{
 				Row:       row,
-				Column:    "1",
+				Column:    "11",
 				Timestamp: t1,
 				Value:     []byte("1"),
 			},
@@ -242,7 +358,7 @@ func mockReadRow(_ context.Context, row string, _ ...bigtable.ReadOption) (bigta
 			},
 			{
 				Row:       row,
-				Column:    "2",
+				Column:    "12",
 				Timestamp: t2,
 				Value:     []byte("1"),
 			},
@@ -260,7 +376,7 @@ func mockReadRow(_ context.Context, row string, _ ...bigtable.ReadOption) (bigta
 			},
 			{
 				Row:       row,
-				Column:    "3",
+				Column:    "13",
 				Timestamp: t3,
 				Value:     []byte("1"),
 			},
@@ -324,11 +440,11 @@ func generateMutations(numEvents int) []*bigtable.Mutation {
 		mut.Set("front", "u", t, []byte(fmt.Sprintf("https://www.example.com/products/%d", mod)))
 		switch mod {
 		case 1, 2:
-			mut.Set("front", "2", t, []byte("1"))
+			mut.Set("front", "12", t, []byte("1"))
 		case 3:
-			mut.Set("front", "3", t, []byte("1"))
+			mut.Set("front", "13", t, []byte("1"))
 		default:
-			mut.Set("front", "1", t, []byte("1"))
+			mut.Set("front", "11", t, []byte("1"))
 		}
 		mut.Set("front", "d", t, []byte(fmt.Sprintf("%d", 1+(i%2))))
 		data = append(data, mut)

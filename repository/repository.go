@@ -19,8 +19,9 @@ type Repository struct {
 func NewRepository(table *bigtable.Table, mapper *mapping.Mapper) *Repository {
 	return &Repository{
 		adapter: &adapter{
-			ReadRow:  table.ReadRow,
-			ReadRows: table.ReadRows,
+			ReadRow:   table.ReadRow,
+			ReadRows:  table.ReadRows,
+			ApplyBulk: table.ApplyBulk,
 		},
 		mapper: mapper,
 	}
@@ -73,6 +74,17 @@ func (r *Repository) Search(ctx context.Context, filter bigtable.Filter) (*data.
 	return buildEventSet(result, r.mapper), nil
 }
 
+func (r *Repository) Write(ctx context.Context, eventSet *data.Set) ([]error, error) {
+	allMutations := r.mapper.GetMutations(eventSet)
+	rowKeys := make([]string, 0, len(allMutations))
+	mutations := make([]*bigtable.Mutation, 0, len(allMutations))
+	for key := range allMutations {
+		rowKeys = append(rowKeys, key)
+		mutations = append(mutations, allMutations[key])
+	}
+	return r.adapter.ApplyBulk(ctx, rowKeys, mutations)
+}
+
 func (r *Repository) search(ctx context.Context, filter bigtable.Filter) ([]bigtable.Row, error) {
 	var rows []bigtable.Row
 	err := r.adapter.ReadRows(ctx, bigtable.RowRange{}, func(row bigtable.Row) bool {
@@ -123,8 +135,9 @@ func filterReadItems(row bigtable.Row, ts []bigtable.Timestamp) map[string][]big
 // adapter acts as a proxy between the repository and the actual data source.
 // It allows to easily mock the data source in tests.
 type adapter struct {
-	ReadRow  func(ctx context.Context, row string, opts ...bigtable.ReadOption) (bigtable.Row, error)
-	ReadRows func(ctx context.Context, arg bigtable.RowSet, f func(bigtable.Row) bool, opts ...bigtable.ReadOption) (err error)
+	ReadRow   func(ctx context.Context, row string, opts ...bigtable.ReadOption) (bigtable.Row, error)
+	ReadRows  func(ctx context.Context, arg bigtable.RowSet, f func(bigtable.Row) bool, opts ...bigtable.ReadOption) (err error)
+	ApplyBulk func(ctx context.Context, rowKeys []string, muts []*bigtable.Mutation, opts ...bigtable.ApplyOption) (errs []error, err error)
 }
 
 // merge returns a new slice with the contents of both slices.
