@@ -12,20 +12,31 @@ type Mapper struct {
 	// mapping coming from the JSON file
 	*Mapping
 	// those functions are in charge of seeking data
-	seekers []func(m *Mapping, column string, value string) (bool, string, string)
+	rules *rules
 }
 
-func NewMapper(mapping *Mapping, extraSeekers ...func(m *Mapping, column string, value string) (bool, string, string)) *Mapper {
+type rules struct {
+	toBigTable, toEvent []func(m *Mapping, column string, value string) (bool, string, string)
+}
+
+func NewMapper(mapping *Mapping) *Mapper {
 	rev := newReverseSeeker()
-	seekers := []func(m *Mapping, column string, value string) (bool, string, string){
-		seekRaw,
-		seekMapped,
+	toEvent := []func(m *Mapping, column string, value string) (bool, string, string){
+		seekFromShortColumn,
+		seekFromMappedColumn,
 		rev.seekFromCache,
 		rev.seekFromMapping,
 	}
-	seekers = append(seekers, extraSeekers...)
+	toBigTable := []func(m *Mapping, column string, value string) (bool, string, string){
+		turnToShortColumn,
+		turnToMappedColumnValue,
+		turnToReversedColumnValue,
+	}
 	return &Mapper{
-		seekers: seekers,
+		rules: &rules{
+			toBigTable: toBigTable,
+			toEvent:    toEvent,
+		},
 		Mapping: mapping,
 	}
 }
@@ -38,7 +49,7 @@ func (m *Mapper) GetMappedEvents(items []bigtable.ReadItem) ([]string, []*data.E
 	cols := make(map[string]bool)
 	rows := make(map[string]map[bigtable.Timestamp]map[string]string)
 	for _, item := range items {
-		col, val := m.Seek(removePrefix(item.Column), string(item.Value))
+		col, val := getMappedData(m.Mapping, m.rules.toEvent, removePrefix(item.Column), string(item.Value))
 		cols[col] = true
 		if _, ok := rows[item.Row]; !ok {
 			rows[item.Row] = make(map[bigtable.Timestamp]map[string]string)
@@ -49,6 +60,32 @@ func (m *Mapper) GetMappedEvents(items []bigtable.ReadItem) ([]string, []*data.E
 		rows[item.Row][item.Timestamp][col] = val
 	}
 	return processColumns(cols), processRows(rows)
+}
+
+func (m *Mapper) GetMutations(eventSet *data.Set) map[string]*bigtable.Mutation {
+	mutations := make(map[string]*bigtable.Mutation)
+	for family, events := range eventSet.Events {
+		for _, event := range events {
+			if _, ok := mutations[event.RowKey]; !ok {
+				mutations[event.RowKey] = bigtable.NewMutation()
+			}
+			for name, value := range event.Cells {
+				btName, btValue := getMappedData(m.Mapping, m.rules.toBigTable, name, value)
+				mutations[event.RowKey].Set(family, btName, bigtable.Time(event.Date), []byte(btValue))
+			}
+		}
+	}
+	return mutations
+}
+
+// getMappedData uses all `rules` to find the appropriate mapping method and return the mapped column + value.
+func getMappedData(mapping *Mapping, rules []func(m *Mapping, column string, value string) (bool, string, string), column string, value string) (string, string) {
+	for _, seek := range rules {
+		if ok, col, val := seek(mapping, column, value); ok {
+			return col, val
+		}
+	}
+	return column, value
 }
 
 func processColumns(cols map[string]bool) []string {
@@ -80,85 +117,4 @@ func removePrefix(col string) string {
 		return s[1]
 	}
 	return col
-}
-
-// Seek uses all `seekers` to find the appropriate mapping method and return the mapped column + value.
-func (m *Mapper) Seek(column string, value string) (string, string) {
-	for _, seek := range m.seekers {
-		if ok, col, val := seek(m.Mapping, column, value); ok {
-			return col, val
-		}
-	}
-	return column, value
-}
-
-// seekRaw is a default seeker that simply translates the column's name if a match exists.
-func seekRaw(m *Mapping, column string, value string) (bool, string, string) {
-	r, ok := m.Raws[column]
-	if ok {
-		return true, r, value
-	}
-	return false, "", ""
-}
-
-// seekMapped checks if a map exists for the given column's short name and returns the full column from the mapping + the mapped value.
-// example with this mapping:
-// "mapped": {
-//    "oi": {
-//      "name": "is_opted_in",
-//      "values": {
-//        "0": "false",
-//        "1": "true"
-//      }
-//    }
-//  },
-// this call would return "is_opted_in" and "true": seekMapped(m, "oi", "1")
-func seekMapped(m *Mapping, column string, value string) (bool, string, string) {
-	ma, ok := m.Mapped[column]
-	if ok {
-		v, ok := ma.Values[value]
-		if ok {
-			return true, ma.Name, v
-		}
-		return true, ma.Name, value
-	}
-	return false, "", ""
-}
-
-// cacheEntry is a cache entry for the reverse Seeker.
-type cacheEntry struct {
-	col   string
-	value string
-}
-
-// reverseSeeker is to use for data stored in a "reversed way" meaning that the column qualifier is the actual data and is a kind of enum value
-type reverseSeeker struct {
-	cache map[string]*cacheEntry
-}
-
-func newReverseSeeker() *reverseSeeker {
-	return &reverseSeeker{
-		cache: make(map[string]*cacheEntry),
-	}
-}
-
-// seekFromCache returns the column and value from the cache if it exists.
-func (c *reverseSeeker) seekFromCache(_ *Mapping, column string, _ string) (bool, string, string) {
-	if entry, ok := c.cache[column]; ok {
-		return true, entry.col, entry.value
-	}
-	return false, "", ""
-}
-
-// seekFromMapping returns the column and value from the mapping.
-func (c *reverseSeeker) seekFromMapping(m *Mapping, column string, _ string) (bool, string, string) {
-	for _, ma := range m.Reversed {
-		for short, val := range ma.Values {
-			if column == short {
-				c.cache[column] = &cacheEntry{col: ma.Name, value: val}
-				return true, ma.Name, val
-			}
-		}
-	}
-	return false, "", ""
 }

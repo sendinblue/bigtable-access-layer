@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigtable"
+	"github.com/DTSL/go-bigtable-access-layer/data"
 )
 
 func TestSeekRaw(t *testing.T) {
@@ -16,7 +17,7 @@ func TestSeekRaw(t *testing.T) {
 		log.Println(err)
 		t.Fatal("should not raise an error")
 	}
-	ok, col, val := seekRaw(mapping, "ui", "123")
+	ok, col, val := seekFromShortColumn(mapping, "ui", "123")
 	if !ok {
 		t.Fatal("should have found the column")
 	}
@@ -26,7 +27,7 @@ func TestSeekRaw(t *testing.T) {
 	if val != "123" {
 		t.Fatal("value must be 123")
 	}
-	ok, col, val = seekRaw(mapping, "unk", "123")
+	ok, col, val = seekFromShortColumn(mapping, "unk", "123")
 	if ok {
 		t.Fatal("should NOT have found the column")
 	}
@@ -53,7 +54,7 @@ func TestSeekMapped(t *testing.T) {
 		log.Println(err)
 		t.Fatal("should not raise an error")
 	}
-	ok, col, val := seekMapped(mapping, "oi", "1")
+	ok, col, val := seekFromMappedColumn(mapping, "oi", "1")
 	if !ok {
 		t.Fatal("should have found the column")
 	}
@@ -63,7 +64,7 @@ func TestSeekMapped(t *testing.T) {
 	if val != "true" {
 		t.Fatal("value must be true")
 	}
-	ok, col, val = seekRaw(mapping, "unk", "123")
+	ok, col, val = seekFromShortColumn(mapping, "unk", "123")
 	if ok {
 		t.Fatal("should NOT have found the column")
 	}
@@ -125,7 +126,7 @@ func TestMapper(t *testing.T) {
 }
 
 func compare(t *testing.T, m *Mapper, col string, val string, wantedCol string, wantedVal string) {
-	fCol, fVal := m.Seek(col, val)
+	fCol, fVal := getMappedData(m.Mapping, m.rules.toEvent, col, val)
 	if fCol != wantedCol {
 		t.Fatal(fmt.Sprintf("wrong column: wanted %s, got %s", wantedCol, fCol))
 	}
@@ -134,29 +135,28 @@ func compare(t *testing.T, m *Mapper, col string, val string, wantedCol string, 
 	}
 }
 
-
 func TestMapper_GetMappedEvents(t *testing.T) {
 	t1 := time.Now().AddDate(0, 0, -3)
 	t2 := time.Now().AddDate(0, 0, -1)
 	bigtableItems := []bigtable.ReadItem{
 		{
-            Row:       "1",
-            Column:    "ui",
-            Timestamp: bigtable.Time(t1),
-            Value:     []byte("42"),
-        },
-        {
-            Row:       "1",
-            Column:    "oi",
-            Timestamp: bigtable.Time(t1),
-            Value:     []byte("1"),
-        },
-        {
-            Row:       "1",
-            Column:    "1",
-            Timestamp: bigtable.Time(t1),
-            Value:     []byte("1"),
-        },
+			Row:       "1",
+			Column:    "ui",
+			Timestamp: bigtable.Time(t1),
+			Value:     []byte("42"),
+		},
+		{
+			Row:       "1",
+			Column:    "oi",
+			Timestamp: bigtable.Time(t1),
+			Value:     []byte("1"),
+		},
+		{
+			Row:       "1",
+			Column:    "1",
+			Timestamp: bigtable.Time(t1),
+			Value:     []byte("1"),
+		},
 		{
 			Row:       "1",
 			Column:    "ui",
@@ -203,5 +203,136 @@ func TestMapper_GetMappedEvents(t *testing.T) {
 	}
 	if v, ok := events[0].Cells["order_status"]; !ok && v != "completed" {
 		t.Fatal("order_status must be 'completed' for 2nd event")
+	}
+}
+
+func TestTurnToShortColumn(t *testing.T) {
+	str := `{"raws": {"ui": "user_id"}}`
+	mapping, err := LoadMapping([]byte(str))
+	if err != nil {
+		log.Println(err)
+		t.Fatal("should not raise an error")
+	}
+	ok, col, val := turnToShortColumn(mapping, "user_id", "123")
+	if !ok {
+		t.Fatal("should have found the column")
+	}
+	if col != "ui" {
+		t.Fatal("column must be user_id")
+	}
+	if val != "123" {
+		t.Fatal("value must be 123")
+	}
+	ok, col, val = turnToShortColumn(mapping, "unk", "123")
+	if ok {
+		t.Fatal("should NOT have found the column")
+	}
+	if col != "" {
+		t.Fatal(fmt.Sprintf("column must be empty, got %s \n", col))
+	}
+	if val != "" {
+		t.Fatal(fmt.Sprintf("value must be empty, got %s \n", val))
+	}
+}
+
+func TestTurnToMappedColumnValue(t *testing.T) {
+	str := `{"mapped": {
+    "oi": {
+      "name": "is_opted_in",
+      "values": {
+        "0": "false",
+        "1": "true"
+      }
+    }
+  }}`
+	mapping, err := LoadMapping([]byte(str))
+	if err != nil {
+		log.Println(err)
+		t.Fatal("should not raise an error")
+	}
+	ok, col, val := turnToMappedColumnValue(mapping, "is_opted_in", "true")
+	if !ok {
+		t.Fatal("should have found the column")
+	}
+	if col != "oi" {
+		t.Fatal("column must be user_id")
+	}
+	if val != "1" {
+		t.Fatal("value must be true")
+	}
+	ok, col, val = seekFromShortColumn(mapping, "unk", "123")
+	if ok {
+		t.Fatal("should NOT have found the column")
+	}
+	if col != "" {
+		t.Fatal(fmt.Sprintf("column must be empty, got %s \n", col))
+	}
+	if val != "" {
+		t.Fatal(fmt.Sprintf("value must be empty, got %s \n", val))
+	}
+}
+
+func TestTurnToReversedColumnValue(t *testing.T) {
+	str := `{"reversed": [{"name": "order_status","values": {"1": "pending_payment","2": "failed"}}]}`
+	mapping, err := LoadMapping([]byte(str))
+	if err != nil {
+		log.Println(err)
+		t.Fatal("should not raise an error")
+	}
+	ok, c1, v1 := turnToReversedColumnValue(mapping, "order_status", "failed")
+	if !ok {
+		t.Fatal("`ok` should be true")
+	}
+	if c1 != "2" {
+		t.Fatalf("c1` should be 2, got %v", c1)
+	}
+	if v1 != "1" {
+		t.Fatal("v1` should be 1")
+	}
+	ok, c1, v1 = turnToReversedColumnValue(mapping, "order_status", "unknown")
+	if ok {
+		t.Fatal("`ok` should be `false`")
+	}
+	if c1 != "" {
+		t.Fatal("c1` should be empty")
+	}
+	if v1 != "" {
+		t.Fatal("v1` should be empty")
+	}
+}
+
+func TestMapper_GetMutations(t *testing.T) {
+	eventSet := data.Set{
+		Columns: []string{"user_id", "is_opted_in", "order_status"},
+		Events: map[string][]*data.Event{
+			"front": {
+				{
+					RowKey: "contact-1",
+					Date:   time.Now(),
+					Cells: map[string]string{
+						"user_id":      "12",
+						"is_opted_in":  "true",
+						"order_status": "processing",
+					},
+				},
+			},
+		},
+	}
+
+	mapping, err := LoadMappingFromFile("./testdata/mapping.json")
+	if err != nil {
+		log.Println(err)
+		t.Fatal("should not raise an error")
+	}
+	mapper := NewMapper(mapping)
+	mutations := mapper.GetMutations(&eventSet)
+
+	if len(mutations) != 1 {
+		t.Fatalf("wrong number of mutations, should have one got : %v", len(mutations))
+	}
+	for key := range mutations {
+		if key != "contact-1" {
+			t.Fatalf("key should be contact-1, got %s", key)
+		}
 	}
 }
