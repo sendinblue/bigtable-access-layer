@@ -23,4 +23,5 @@ jobs:
         env:
           CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
         with:
+          debug: true
           coverageLocations: coverage.out:gocov
