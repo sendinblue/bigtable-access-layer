@@ -11,6 +11,10 @@ jobs:
           go-version: '1.17.1'
       - name: Run tests
         run: go test ./...
+      - name: Fetch project module name
+        run: |
+          echo "::set-output name=MODULE_NAME::$(go mod edit -json  | jq .Module.Path | tr -d '\"')"
+        id: project-module-name
       - name: Code climate Coverage
         uses: paambaati/codeclimate-action@v2.7.5
         env:
