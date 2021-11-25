@@ -18,6 +18,7 @@ jobs:
         with:
           debug: true
           coverageCommand: go test -coverprofile=coverage.out ./...
+          prefix: ${{ steps.project-module-name.outputs.MODULE_NAME }}
           coverageLocations: coverage.out:gocov
       - name: Run Gosec Security Scanner
         run: |
