@@ -10,7 +10,15 @@ jobs:
         with:
           go-version: '1.17.1'
       - name: Run tests
-        run: go test -v -cover -coverprofile=coverage.out ./...
+        run: go test ./...
+      - name: Code climate Coverage
+        uses: paambaati/codeclimate-action@v2.7.5
+        env:
+          CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
+        with:
+          debug: true
+          coverageCommand: go test -coverprofile=coverage.out ./...
+          coverageLocations: coverage.out:gocov
       - name: Run Gosec Security Scanner
         run: |
           export PATH=$PATH:$(go env GOPATH)/bin
@@ -18,10 +26,3 @@ jobs:
           gosec ./...
       - name: Run Golang Linter
         uses: golangci/golangci-lint-action@v2
-      - name: Code climate Coverage
-        uses: paambaati/codeclimate-action@v2.7.5
-        env:
-          CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
-        with:
-          debug: true
-          coverageLocations: coverage.out:gocov
