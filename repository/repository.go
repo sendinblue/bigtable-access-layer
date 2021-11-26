@@ -10,21 +10,29 @@ import (
 )
 
 type Repository struct {
-	adapter *adapter
+	adapter Adapter
 	mapper  *mapping.Mapper
 	maxRows int
 }
 
 // NewRepository creates a new Repository for the given table.
-func NewRepository(table *bigtable.Table, mapper *mapping.Mapper) *Repository {
-	return &Repository{
-		adapter: &adapter{
-			ReadRow:   table.ReadRow,
-			ReadRows:  table.ReadRows,
-			ApplyBulk: table.ApplyBulk,
-		},
-		mapper: mapper,
+func NewRepository(table *bigtable.Table, mapper *mapping.Mapper, opts ...Option) *Repository {
+	adapter := &bigTableAdapter{
+		table: table,
 	}
+	repo := &Repository{
+		adapter: adapter,
+		mapper:  mapper,
+		maxRows: 100,
+	}
+	for _, opt := range opts {
+		opt.apply(repo)
+	}
+	return repo
+}
+
+type Option interface {
+	apply(r *Repository)
 }
 
 /*
@@ -132,12 +140,28 @@ func filterReadItems(row bigtable.Row, ts []bigtable.Timestamp) map[string][]big
 	return result
 }
 
-// adapter acts as a proxy between the repository and the actual data source.
+// Adapter acts as a proxy between the repository and the actual data source.
 // It allows to easily mock the data source in tests.
-type adapter struct {
-	ReadRow   func(ctx context.Context, row string, opts ...bigtable.ReadOption) (bigtable.Row, error)
-	ReadRows  func(ctx context.Context, arg bigtable.RowSet, f func(bigtable.Row) bool, opts ...bigtable.ReadOption) (err error)
-	ApplyBulk func(ctx context.Context, rowKeys []string, muts []*bigtable.Mutation, opts ...bigtable.ApplyOption) (errs []error, err error)
+type Adapter interface {
+	ReadRow(ctx context.Context, row string, opts ...bigtable.ReadOption) (bigtable.Row, error)
+	ReadRows(ctx context.Context, arg bigtable.RowSet, f func(bigtable.Row) bool, opts ...bigtable.ReadOption) (err error)
+	ApplyBulk(ctx context.Context, rowKeys []string, muts []*bigtable.Mutation, opts ...bigtable.ApplyOption) (errs []error, err error)
+}
+
+type bigTableAdapter struct {
+	table *bigtable.Table
+}
+
+func (a *bigTableAdapter) ReadRow(ctx context.Context, row string, opts ...bigtable.ReadOption) (bigtable.Row, error) {
+	return a.table.ReadRow(ctx, row, opts...)
+}
+
+func (a *bigTableAdapter) ReadRows(ctx context.Context, arg bigtable.RowSet, f func(bigtable.Row) bool, opts ...bigtable.ReadOption) (err error) {
+	return a.table.ReadRows(ctx, arg, f, opts...)
+}
+
+func (a *bigTableAdapter) ApplyBulk(ctx context.Context, rowKeys []string, muts []*bigtable.Mutation, opts ...bigtable.ApplyOption) (errs []error, err error) {
+	return a.table.ApplyBulk(ctx, rowKeys, muts, opts...)
 }
 
 // merge returns a new slice with the contents of both slices.
