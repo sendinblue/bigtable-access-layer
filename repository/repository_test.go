@@ -172,11 +172,8 @@ var t3 = bigtable.Time(time.Date(2020, time.January, 1, 0, 3, 0, 0, time.UTC))
 func TestRepository_Read(t *testing.T) {
 
 	ctx := context.Background()
-	adapter := &adapter{
-		ReadRow: mockReadRow,
-	}
 	repository := &Repository{
-		adapter: adapter,
+		adapter: mockAdapter{},
 		mapper:  getMockMapper(t),
 	}
 	eventSet, err := repository.Read(ctx, "contact-3")
@@ -226,12 +223,8 @@ func TestRepository_Read(t *testing.T) {
 
 func TestRepository_Search(t *testing.T) {
 	ctx := context.Background()
-	adapter := &adapter{
-		ReadRow: mockReadRow,
-		ReadRows: mockReadRows,
-	}
 	repository := &Repository{
-		adapter: adapter,
+		adapter: mockAdapter{},
 		mapper:  getMockMapper(t),
 	}
 	filter := bigtable.ColumnFilter("d")
@@ -289,7 +282,9 @@ func getMockMapper(t *testing.T) *mapping.Mapper {
 	return mapping.NewMapper(jsonMapping)
 }
 
-func mockReadRows(_ context.Context, _ bigtable.RowSet, f func(bigtable.Row) bool, _ ...bigtable.ReadOption) (err error) {
+type mockAdapter struct {}
+
+func (a mockAdapter) ReadRows(_ context.Context, _ bigtable.RowSet, f func(bigtable.Row) bool, _ ...bigtable.ReadOption) (err error) {
 	for _, row := range getRows() {
 		f(row)
 	}
@@ -323,7 +318,7 @@ func getRows() []bigtable.Row {
 	}
 }
 
-func mockReadRow(_ context.Context, row string, _ ...bigtable.ReadOption) (bigtable.Row, error) {
+func (a mockAdapter) ReadRow(_ context.Context, row string, _ ...bigtable.ReadOption) (bigtable.Row, error) {
 	output := bigtable.Row{
 		"front": []bigtable.ReadItem{
 			{
@@ -383,6 +378,10 @@ func mockReadRow(_ context.Context, row string, _ ...bigtable.ReadOption) (bigta
 		},
 	}
 	return output, nil
+}
+
+func (a mockAdapter) ApplyBulk(_ context.Context, _ []string, _ []*bigtable.Mutation, _ ...bigtable.ApplyOption) (errs []error, err error) {
+	return nil, nil
 }
 
 func getBigTableClient(ctx context.Context) *bigtable.Client {
