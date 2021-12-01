@@ -134,5 +134,6 @@ func fetchRow(ctx context.Context, client *bigtable.Client, out io.Writer, id st
 	}
 	return nil
 }
-
 ```
+
+Please see the code in the ['example folder](.example) for a complete example that you can run on your local machine using the emulator provided with Google Cloud SDK.
