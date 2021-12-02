@@ -46,7 +46,7 @@ The mapping system will map it to a new data.Event containing the following data
     {
       "user_id": "12345",
       "is_opted_in": "true",
-      "order_status": "completed"
+      "order_status": "processing"
     }
  */
 package mapping
