@@ -36,7 +36,7 @@ func TestDebugAdapter(t *testing.T) {
 	if len(dbgWriter.lines) != 2 {
 		t.Errorf("expected 2 lines, got %d", len(dbgWriter.lines))
 	}
-	_, err = repo.search(ctx, bigtable.LatestNFilter(1))
+	_, err = repo.search(ctx, bigtable.RowRange{}, bigtable.LatestNFilter(1))
 	if err != nil {
 		log.Fatalln(err)
 	}

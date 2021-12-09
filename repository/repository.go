@@ -9,6 +9,8 @@ import (
 	"github.com/DTSL/go-bigtable-access-layer/mapping"
 )
 
+const defaultMaxRows = 100
+
 type Repository struct {
 	adapter Adapter
 	mapper  *mapping.Mapper
@@ -23,7 +25,7 @@ func NewRepository(table *bigtable.Table, mapper *mapping.Mapper, opts ...Option
 	repo := &Repository{
 		adapter: adapter,
 		mapper:  mapper,
-		maxRows: 100,
+		maxRows: defaultMaxRows,
 	}
 	for _, opt := range opts {
 		opt.apply(repo)
@@ -33,6 +35,14 @@ func NewRepository(table *bigtable.Table, mapper *mapping.Mapper, opts ...Option
 
 type Option interface {
 	apply(r *Repository)
+}
+
+type MaxRowsOption struct {
+	maxRows int
+}
+
+func (o MaxRowsOption) apply(r *Repository) {
+	r.maxRows = o.maxRows
 }
 
 /*
@@ -65,8 +75,8 @@ func buildEventSet(rows []bigtable.Row, mapper *mapping.Mapper) *data.Set {
 }
 
 // Search for rows in the repository that match the given filter and return the according data.Set
-func (r *Repository) Search(ctx context.Context, filter bigtable.Filter) (*data.Set, error) {
-	rows, err := r.search(ctx, filter)
+func (r *Repository) Search(ctx context.Context, rowSet bigtable.RowSet, filter bigtable.Filter) (*data.Set, error) {
+	rows, err := r.search(ctx, rowSet, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -93,9 +103,9 @@ func (r *Repository) Write(ctx context.Context, eventSet *data.Set) ([]error, er
 	return r.adapter.ApplyBulk(ctx, rowKeys, mutations)
 }
 
-func (r *Repository) search(ctx context.Context, filter bigtable.Filter) ([]bigtable.Row, error) {
+func (r *Repository) search(ctx context.Context, rowSet bigtable.RowSet, filter bigtable.Filter) ([]bigtable.Row, error) {
 	var rows []bigtable.Row
-	err := r.adapter.ReadRows(ctx, bigtable.RowRange{}, func(row bigtable.Row) bool {
+	err := r.adapter.ReadRows(ctx, rowSet, func(row bigtable.Row) bool {
 		rows = append(rows, row)
 		return true
 	}, bigtable.RowFilter(filter))
