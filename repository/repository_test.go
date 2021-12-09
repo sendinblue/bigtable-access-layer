@@ -17,12 +17,11 @@ import (
 )
 
 const (
-	projectID = "project-id"
+	projectID    = "project-id"
 	instance     = "instance-id"
 	table        = "ecommerce_events"
 	columnFamily = "front"
 )
-
 
 func ExampleRepository_Read() {
 	ctx := context.Background()
@@ -67,62 +66,62 @@ func ExampleRepository_Write() {
 	repo := NewRepository(tbl, mapper)
 	eventSet := &data.Set{Events: map[string][]*data.Event{
 		"front": {
-            {
-				RowKey: "contact-101",
-				Date: time.Date(2018, time.January, 1, 0, 0, 0, 0, time.UTC),
-                Cells: map[string]string{
-                    "event_type": "page_view",
-                    "device_type":  "Smartphone",
-					"url": "https://example.org/some/product",
-                },
-            },
 			{
 				RowKey: "contact-101",
-				Date: time.Date(2018, time.January, 1, 0, 1, 0, 0, time.UTC),
+				Date:   time.Date(2018, time.January, 1, 0, 0, 0, 0, time.UTC),
 				Cells: map[string]string{
-					"event_type": "add_to_cart",
-					"device_type":  "Smartphone",
-					"url": "https://example.org/some/product",
+					"event_type":  "page_view",
+					"device_type": "Smartphone",
+					"url":         "https://example.org/some/product",
 				},
 			},
 			{
 				RowKey: "contact-101",
-				Date: time.Date(2018, time.January, 1, 0, 2, 0, 0, time.UTC),
+				Date:   time.Date(2018, time.January, 1, 0, 1, 0, 0, time.UTC),
 				Cells: map[string]string{
-					"event_type": "purchase",
-					"device_type":  "Smartphone",
-					"url": "https://example.org/some/product",
+					"event_type":  "add_to_cart",
+					"device_type": "Smartphone",
+					"url":         "https://example.org/some/product",
+				},
+			},
+			{
+				RowKey: "contact-101",
+				Date:   time.Date(2018, time.January, 1, 0, 2, 0, 0, time.UTC),
+				Cells: map[string]string{
+					"event_type":  "purchase",
+					"device_type": "Smartphone",
+					"url":         "https://example.org/some/product",
 				},
 			},
 			{
 				RowKey: "contact-102",
-				Date: time.Date(2018, time.January, 1, 0, 2, 0, 0, time.UTC),
+				Date:   time.Date(2018, time.January, 1, 0, 2, 0, 0, time.UTC),
 				Cells: map[string]string{
-					"event_type": "add_to_cart",
-					"device_type":  "Computer",
-					"url": "https://example.org/some/product",
+					"event_type":  "add_to_cart",
+					"device_type": "Computer",
+					"url":         "https://example.org/some/product",
 				},
 			},
-        },
+		},
 	}}
 
 	errs, err := repo.Write(ctx, eventSet)
 	if err != nil {
-        log.Fatalln(err)
-    }
+		log.Fatalln(err)
+	}
 	if len(errs) > 0 {
 		log.Fatalln(errs)
 	}
 
 	row, err := tbl.ReadRow(ctx, "contact-101")
 	if err != nil {
-        log.Fatalln(err)
-    }
+		log.Fatalln(err)
+	}
 	for _, family := range row {
-        for _, cell := range family {
-            fmt.Println(cell.Column, string(cell.Value))
-        }
-    }
+		for _, cell := range family {
+			fmt.Println(cell.Column, string(cell.Value))
+		}
+	}
 
 	row, err = tbl.ReadRow(ctx, "contact-102")
 	if err != nil {
@@ -136,14 +135,14 @@ func ExampleRepository_Write() {
 
 	readSet, err := repo.Read(ctx, "contact-102")
 	if err != nil {
-        log.Fatalln(err)
-    }
+		log.Fatalln(err)
+	}
 	for _, event := range readSet.Events["front"] {
 		fmt.Println(event.Date.UTC())
 		fmt.Println(event.RowKey)
 		fmt.Println(event.Cells["event_type"])
 		fmt.Println(event.Cells["device_type"])
-    }
+	}
 
 	// Output:
 	// front:11 1
@@ -191,8 +190,8 @@ func TestRepository_Read(t *testing.T) {
 		}
 
 		if v[0].RowKey != "contact-3" {
-            t.Fatalf("expected contact-3, got %s", v[0].RowKey)
-        }
+			t.Fatalf("expected contact-3, got %s", v[0].RowKey)
+		}
 		if v[0].Cells["url"] != "http://someexample.url/query/string/1" {
 			t.Fatalf("expected http://someexample.url/query/string/1, got %s", v[0].Cells["url"])
 		}
@@ -204,8 +203,8 @@ func TestRepository_Read(t *testing.T) {
 		for _, event := range v {
 			if event.Date.Unix() == t1.Time().Unix() {
 				if event.Cells["event_type"] != "page_view" {
-                    t.Fatalf("expected page_view, got %s", event.Cells["event_type"])
-                }
+					t.Fatalf("expected page_view, got %s", event.Cells["event_type"])
+				}
 			}
 			if event.Date.Unix() == t2.Time().Unix() {
 				if event.Cells["event_type"] != "add_to_cart" {
@@ -217,7 +216,7 @@ func TestRepository_Read(t *testing.T) {
 					t.Fatalf("expected purchase, got %s", event.Cells["event_type"])
 				}
 			}
-        }
+		}
 	}
 }
 
@@ -228,7 +227,7 @@ func TestRepository_Search(t *testing.T) {
 		mapper:  getMockMapper(t),
 	}
 	filter := bigtable.ColumnFilter("d")
-	eventSet, err := repository.Search(ctx, filter)
+	eventSet, err := repository.Search(ctx, bigtable.RowRange{}, filter)
 	if err != nil {
 		t.Fatalf("failed to read: %v", err)
 	}
@@ -267,6 +266,7 @@ func TestRepository_Search(t *testing.T) {
 	}
 
 }
+
 //go:embed testdata/mapping.json
 var fs embed.FS
 
@@ -282,7 +282,7 @@ func getMockMapper(t *testing.T) *mapping.Mapper {
 	return mapping.NewMapper(jsonMapping)
 }
 
-type mockAdapter struct {}
+type mockAdapter struct{}
 
 func (a mockAdapter) ReadRows(_ context.Context, _ bigtable.RowSet, f func(bigtable.Row) bool, _ ...bigtable.ReadOption) (err error) {
 	for _, row := range getRows() {
