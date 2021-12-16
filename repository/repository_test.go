@@ -143,7 +143,6 @@ func ExampleRepository_Write() {
 		fmt.Println(event.Cells["event_type"])
 		fmt.Println(event.Cells["device_type"])
 	}
-
 	// Output:
 	// front:11 1
 	// front:12 1
@@ -162,6 +161,99 @@ func ExampleRepository_Write() {
 	// add_to_cart
 	// Computer
 
+}
+
+func ExampleRepository_Search() {
+	ctx := context.Background()
+	client := getBigTableClient(ctx)
+	c, err := fs.ReadFile("testdata/mapping.json")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	jsonMapping, err := mapping.LoadMapping(c)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	mapper := mapping.NewMapper(jsonMapping)
+	tbl := client.Open(table)
+
+	repo := NewRepository(tbl, mapper)
+	eventSet := &data.Set{Events: map[string][]*data.Event{
+		"front": {
+			{
+				RowKey: "contactx-101",
+				Date:   time.Date(2018, time.January, 1, 0, 0, 0, 0, time.UTC),
+				Cells: map[string]string{
+					"event_type":  "page_view",
+					"device_type": "Smartphone",
+					"url":         "https://example.org/some/product",
+				},
+			},
+			{
+				RowKey: "contactx-101",
+				Date:   time.Date(2018, time.January, 1, 0, 1, 0, 0, time.UTC),
+				Cells: map[string]string{
+					"event_type":  "add_to_cart",
+					"device_type": "Smartphone",
+					"url":         "https://example.org/some/product",
+				},
+			},
+			{
+				RowKey: "contactx-101",
+				Date:   time.Date(2018, time.January, 1, 0, 2, 0, 0, time.UTC),
+				Cells: map[string]string{
+					"event_type":  "purchase",
+					"device_type": "Smartphone",
+					"url":         "https://example.org/some/product",
+				},
+			},
+			{
+				RowKey: "contactx-102",
+				Date:   time.Date(2018, time.January, 1, 0, 2, 0, 0, time.UTC),
+				Cells: map[string]string{
+					"event_type":  "add_to_cart",
+					"device_type": "Computer",
+					"url":         "https://example.org/some/product",
+				},
+			},
+			{
+				RowKey: "contacty-102",
+				Date:   time.Date(2018, time.January, 1, 0, 2, 0, 0, time.UTC),
+				Cells: map[string]string{
+					"event_type":  "add_to_cart",
+					"device_type": "Computer",
+					"url":         "https://example.org/some/product",
+				},
+			},
+		},
+	}}
+	errs, err := repo.Write(ctx, eventSet)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if len(errs) > 0 {
+		log.Fatalln(errs)
+	}
+	readSet, err := repo.Search(ctx, bigtable.PrefixRange("contactx"), bigtable.CellsPerRowLimitFilter(1))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	for _, event := range readSet.Events["front"] {
+		fmt.Println(event.Date.UTC())
+		fmt.Println(event.RowKey)
+		fmt.Println(event.Cells["event_type"])
+		fmt.Println(event.Cells["device_type"])
+	}
+
+	// Output:
+	// 2018-01-01 00:00:00 +0000 UTC
+	// contactx-101
+	// page_view
+	// Smartphone
+	// 2018-01-01 00:02:00 +0000 UTC
+	// contactx-102
+	// add_to_cart
+	// Computer
 }
 
 var t1 = bigtable.Time(time.Date(2020, time.January, 1, 0, 1, 0, 0, time.UTC))

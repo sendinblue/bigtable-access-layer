@@ -67,7 +67,7 @@ func buildEventSet(rows []bigtable.Row, mapper *mapping.Mapper) *data.Set {
 	for _, row := range rows {
 		for family, readItem := range row {
 			cols, events := mapper.GetMappedEvents(readItem)
-			set.Events[family] = events
+			set.Events[family] = append(set.Events[family], events...)
 			set.Columns = merge(set.Columns, cols)
 		}
 	}
