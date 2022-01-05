@@ -257,6 +257,81 @@ func ExampleRepository_Search() {
 	// Computer
 }
 
+func ExampleRepository_ReadLast() {
+	ctx := context.Background()
+	client := getBigTableClient(ctx)
+	c, err := fs.ReadFile("testdata/mapping.json")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	jsonMapping, err := mapping.LoadMapping(c)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	mapper := mapping.NewMapper(jsonMapping)
+	tbl := client.Open(table)
+
+	repo := NewRepository(tbl, mapper)
+	eventSet := &data.Set{Events: map[string][]*data.Event{
+		"front": {
+			{
+				RowKey: "contactz-102",
+				Date:   time.Date(2018, time.January, 1, 0, 2, 0, 0, time.UTC),
+				Cells: map[string]string{
+					"event_type":  "add_to_cart",
+					"device_type": "Computer",
+					"url":         "https://example.org/some/product",
+				},
+			},
+		},
+	}}
+
+	// insert
+	errs, err := repo.Write(ctx, eventSet)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if len(errs) > 0 {
+		log.Fatalln(errs)
+	}
+
+	// update
+	eventSet = &data.Set{Events: map[string][]*data.Event{
+		"front": {
+			{
+				RowKey: "contactz-102",
+				Date:   time.Now(),
+				Cells: map[string]string{
+					"event_type":  "purchase",
+					"device_type": "Smartphone",
+					"url":         "https://example.org/some/cart",
+				},
+			},
+		},
+	}}
+	errs, err = repo.Write(ctx, eventSet)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if len(errs) > 0 {
+		log.Fatalln(errs)
+	}
+
+	readSet, err := repo.ReadLast(ctx, "contactz-102")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	for _, event := range readSet.Events["front"] {
+		fmt.Println(event.Cells["event_type"])
+		fmt.Println(event.Cells["device_type"])
+	}
+	// Output:
+	// add_to_cart
+	//
+	// purchase
+	// Smartphone
+}
+
 var t1 = bigtable.Time(time.Date(2020, time.January, 1, 0, 1, 0, 0, time.UTC))
 var t2 = bigtable.Time(time.Date(2020, time.January, 1, 0, 2, 0, 0, time.UTC))
 var t3 = bigtable.Time(time.Date(2020, time.January, 1, 0, 3, 0, 0, time.UTC))
@@ -358,6 +433,60 @@ func TestRepository_Search(t *testing.T) {
 		}
 	}
 
+}
+
+func TestRepository_ReadLast(t *testing.T) {
+	ctx := context.Background()
+	repository := &Repository{
+		adapter: mockAdapter{},
+		mapper:  getMockMapper(t),
+	}
+	eventSet, err := repository.ReadLast(ctx, "contact-3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err != nil {
+		t.Fatalf("failed to read: %v", err)
+	}
+	if len(eventSet.Events) != 1 {
+		t.Fatalf("expected 1 event family, got %d", len(eventSet.Events))
+	}
+	if v, ok := eventSet.Events["front"]; !ok {
+		t.Fatalf("expected front family, got %v", v)
+	} else {
+		if len(v) != 3 {
+			t.Fatalf("expected 3 events, got %d", len(v))
+		}
+
+		if v[0].RowKey != "contact-3" {
+			t.Fatalf("expected contact-3, got %s", v[0].RowKey)
+		}
+		if v[0].Cells["url"] != "http://someexample.url/query/string/1" {
+			t.Fatalf("expected http://someexample.url/query/string/1, got %s", v[0].Cells["url"])
+		}
+		if v[0].Cells["device_type"] != "Smartphone" {
+			t.Fatalf("expected Smartphone, got %s", v[0].Cells["device_type"])
+		}
+		// here we're testing each event_type depending on the timestamp.
+		// It's because Go doesn't guarantee the order of the map iteration
+		for _, event := range v {
+			if event.Date.Unix() == t1.Time().Unix() {
+				if event.Cells["event_type"] != "page_view" {
+					t.Fatalf("expected page_view, got %s", event.Cells["event_type"])
+				}
+			}
+			if event.Date.Unix() == t2.Time().Unix() {
+				if event.Cells["event_type"] != "add_to_cart" {
+					t.Fatalf("expected add_to_cart, got %s", event.Cells["event_type"])
+				}
+			}
+			if event.Date.Unix() == t3.Time().Unix() {
+				if event.Cells["event_type"] != "purchase" {
+					t.Fatalf("expected purchase, got %s", event.Cells["event_type"])
+				}
+			}
+		}
+	}
 }
 
 //go:embed testdata/mapping.json
