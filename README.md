@@ -1,10 +1,6 @@
-# go-bigtable-access-layer
+# bigtable-access-layer
 
-[![Maintainability](https://api.codeclimate.com/v1/badges/e06e7c0df20da7a298fc/maintainability)](https://codeclimate.com/repos/619e604df3947401b701334c/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/e06e7c0df20da7a298fc/test_coverage)](https://codeclimate.com/repos/619e604df3947401b701334c/test_coverage)
-
-
-`go-bigtable-access-layer` is a library designed to ease reading data from Big Table. it features:
+`bigtable-access-layer` is a library designed to ease reading data from Big Table. it features:
 
 - cells grouping to build events using the timestamp
 - schema mapping to transform the data into a human-readable format
@@ -132,20 +128,6 @@ for name, event := range groupByEventAndDevice {
     fmt.Printf("latest: %+v\n", event)
 }
 ```
-
-## Documentation
-
-### Godoc
-
-To browse the documentation, you can use `godoc` in the root folder of the library.
-
-```shell
-go get -u golang.org/x/tools/godoc
-cd $GOPATH/src/github.com/DTSL/go-bigtable-access-layer
-godoc
-```
-
-Then head to http://localhost:6060/pkg/github.com/DTSL/go-bigtable-access-layer/
 
 ### Example code
 

@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/bigtable"
-	"github.com/DTSL/go-bigtable-access-layer/data"
+	"github.com/sendinblue/bigtable-access-layer/data"
 )
 
 // Mapper is in charge of translating data from Big Table into a human-readable format.

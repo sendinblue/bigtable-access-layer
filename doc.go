@@ -1,9 +1,9 @@
 /*
 Copyright 2021 Sendinblue S.A.S
- */
+*/
 
 /*
-Package go_bigtable_access_layer is a library designed to ease reading data from Big Table. it features:
+Package bigtable_access_layer is a library designed to ease reading data from Big Table. it features:
 
  - Cells grouping to build events using the timestamp
  - Schema mapping to transform the data into a human-readable format
@@ -123,4 +123,4 @@ the required logic to search filtered data and collect all properties for each e
 	}
 
 */
-package go_bigtable_access_layer // import "github.com/sendinblue/go-bigtable-access-layer"
+package bigtable_access_layer // import "github.com/sendinblue/bigtable-access-layer"

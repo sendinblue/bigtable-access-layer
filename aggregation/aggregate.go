@@ -1,6 +1,6 @@
 /*
 Package aggregation provides aggregation functions to group events as if we were using SQL statement such as GROUP BY.
- */
+*/
 /*
 Two main functions are provided:
  - GetLatestBy to get the latest event for each group. A group is defined by one or more columns.
@@ -13,7 +13,7 @@ package aggregation
 import (
 	"strconv"
 
-	"github.com/DTSL/go-bigtable-access-layer/data"
+	"github.com/sendinblue/bigtable-access-layer/data"
 )
 
 // GetLatestBy groups lines by the given columns keeping the most recent one, thus without performing any aggregation.
@@ -91,8 +91,8 @@ func NewMax(column string, projection string) *Max {
 
 func (m *Max) Compute(e *data.Event, events []*data.Event) *data.Event {
 	e.Cells[m.projection] = selectOne(e, events, m.column, func(c, s float64) bool {
-        return c > s
-    })
+		return c > s
+	})
 	return e
 }
 

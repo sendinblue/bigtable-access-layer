@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigtable"
-	"github.com/DTSL/go-bigtable-access-layer/data"
-	"github.com/DTSL/go-bigtable-access-layer/mapping"
+	"github.com/sendinblue/bigtable-access-layer/data"
+	"github.com/sendinblue/bigtable-access-layer/mapping"
 )
 
 func TestDebugAdapter(t *testing.T) {

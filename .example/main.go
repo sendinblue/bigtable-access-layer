@@ -5,15 +5,15 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"github.com/DTSL/go-bigtable-access-layer/repository"
 	"io"
 	"log"
 	"os"
 	"time"
 
 	"cloud.google.com/go/bigtable"
-	"github.com/DTSL/go-bigtable-access-layer/aggregation"
-	"github.com/DTSL/go-bigtable-access-layer/mapping"
+	"github.com/sendinblue/bigtable-access-layer/aggregation"
+	"github.com/sendinblue/bigtable-access-layer/mapping"
+	"github.com/sendinblue/bigtable-access-layer/repository"
 )
 
 const (
@@ -74,8 +74,8 @@ func readAndUseMapping(ctx context.Context, client *bigtable.Client, out io.Writ
 		cols, events := mapper.GetMappedEvents(items)
 		fmt.Fprintf(out, "Columns: %+v\n", cols)
 		for _, event := range events {
-            fmt.Fprintf(out, "Event: %+v\n", event)
-        }
+			fmt.Fprintf(out, "Event: %+v\n", event)
+		}
 	}
 	return nil
 }
@@ -110,9 +110,9 @@ func aggregate(ctx context.Context, client *bigtable.Client, out io.Writer, tabl
 	}
 	j, err := json.Marshal(jsonOutput)
 	if err != nil {
-		_,_ = fmt.Fprintf(out, "error while formatting JSON: %v. Delivering the raw content instead:\n %+v \n", err, jsonOutput)
+		_, _ = fmt.Fprintf(out, "error while formatting JSON: %v. Delivering the raw content instead:\n %+v \n", err, jsonOutput)
 	}
-	_,_ = fmt.Fprintf(out, "%s\n", j)
+	_, _ = fmt.Fprintf(out, "%s\n", j)
 	return nil
 }
 
@@ -129,8 +129,8 @@ func printTwoEvents(ctx context.Context, client *bigtable.Client, out io.Writer,
 	repo := repository.NewRepository(client.Open(table), mapper)
 	eventSet, err := repo.Read(ctx, "contact-3")
 	if err != nil {
-        return err
-    }
+		return err
+	}
 	jsonOutput := make(map[string]interface{})
 	jsonOutput["columns"] = eventSet.Columns
 	for fam, events := range eventSet.Events {
@@ -139,9 +139,9 @@ func printTwoEvents(ctx context.Context, client *bigtable.Client, out io.Writer,
 	}
 	j, err := json.Marshal(jsonOutput)
 	if err != nil {
-        _,_ = fmt.Fprintf(out, "error while formatting JSON: %v. Delivering the raw content instead:\n %+v \n", err, jsonOutput)
-    }
-	_,_ = fmt.Fprintf(out, "%s\n", j)
+		_, _ = fmt.Fprintf(out, "error while formatting JSON: %v. Delivering the raw content instead:\n %+v \n", err, jsonOutput)
+	}
+	_, _ = fmt.Fprintf(out, "%s\n", j)
 	return nil
 }
 

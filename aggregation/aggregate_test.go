@@ -5,19 +5,19 @@ import (
 	"cloud.google.com/go/bigtable/bttest"
 	"context"
 	"fmt"
-	"github.com/DTSL/go-bigtable-access-layer/mapping"
-	"github.com/DTSL/go-bigtable-access-layer/repository"
+	"github.com/sendinblue/bigtable-access-layer/mapping"
+	"github.com/sendinblue/bigtable-access-layer/repository"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"log"
 	"testing"
 	"time"
 
-	"github.com/DTSL/go-bigtable-access-layer/data"
+	"github.com/sendinblue/bigtable-access-layer/data"
 )
 
 const (
-	projectID = "project-id"
+	projectID    = "project-id"
 	instance     = "instance-id"
 	table        = "ecommerce_events"
 	columnFamily = "front"
@@ -405,7 +405,7 @@ func TestAverage_Compute(t *testing.T) {
 			},
 		},
 	}
-	comp(t,  result, expected)
+	comp(t, result, expected)
 }
 
 func TestSum_Compute(t *testing.T) {
@@ -734,11 +734,11 @@ func comp(t *testing.T, result, expected map[string]*data.Event) {
 		t.Fatalf("wrong number of events, wanted: %v, got :%v \n", len(expected), len(result))
 	}
 	for name, events := range result {
-		if _, ok := expected[name]; ! ok {
+		if _, ok := expected[name]; !ok {
 			t.Fatalf("unexpected group %s \n", name)
 		}
 		for cname, cvalue := range events.Cells {
-			if v, ok := expected[name].Cells[cname]; ! ok {
+			if v, ok := expected[name].Cells[cname]; !ok {
 				t.Fatalf("unexpected column")
 			} else {
 				if cvalue != v {
@@ -810,7 +810,7 @@ func generateMutations(numEvents int) []*bigtable.Mutation {
 		default:
 			mut.Set("front", "1", t, []byte("1"))
 		}
-		mut.Set("front", "a", t, []byte(fmt.Sprintf("%d", mod * 10)))
+		mut.Set("front", "a", t, []byte(fmt.Sprintf("%d", mod*10)))
 		mut.Set("front", "d", t, []byte(fmt.Sprintf("%d", 1+(i%2))))
 		mutations = append(mutations, mut)
 	}

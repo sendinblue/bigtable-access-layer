@@ -10,8 +10,8 @@ import (
 
 	"cloud.google.com/go/bigtable"
 	"cloud.google.com/go/bigtable/bttest"
-	"github.com/DTSL/go-bigtable-access-layer/data"
-	"github.com/DTSL/go-bigtable-access-layer/mapping"
+	"github.com/sendinblue/bigtable-access-layer/data"
+	"github.com/sendinblue/bigtable-access-layer/mapping"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 )
