@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"testing"
 	"time"
@@ -481,7 +482,7 @@ func getBigTableClient(ctx context.Context) *bigtable.Client {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	conn, err := grpc.Dial(srv.Addr, grpc.WithInsecure())
+	conn, err := grpc.Dial(srv.Addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalln(err)
 	}
