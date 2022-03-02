@@ -1,5 +1,8 @@
 # bigtable-access-layer
 
+[![Maintainability](https://api.codeclimate.com/v1/badges/be672445c82f67480f20/maintainability)](https://codeclimate.com/github/sendinblue/bigtable-access-layer/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/be672445c82f67480f20/test_coverage)](https://codeclimate.com/github/sendinblue/bigtable-access-layer/test_coverage)
+
 `bigtable-access-layer` is a library designed to ease reading data from Big Table. it features:
 
 - cells grouping to build events using the timestamp
