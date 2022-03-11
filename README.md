@@ -2,6 +2,7 @@
 
 [![Maintainability](https://api.codeclimate.com/v1/badges/be672445c82f67480f20/maintainability)](https://codeclimate.com/github/sendinblue/bigtable-access-layer/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/be672445c82f67480f20/test_coverage)](https://codeclimate.com/github/sendinblue/bigtable-access-layer/test_coverage)
+[![Go Reference](https://pkg.go.dev/badge/github.com/sendinblue/bigtable-access-layer.svg)](https://pkg.go.dev/github.com/sendinblue/bigtable-access-layer)
 
 `bigtable-access-layer` is a library designed to ease reading data from Big Table. it features:
 
