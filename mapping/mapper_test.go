@@ -1,7 +1,6 @@
 package mapping
 
 import (
-	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -32,10 +31,10 @@ func TestSeekRaw(t *testing.T) {
 		t.Fatal("should NOT have found the column")
 	}
 	if col != "" {
-		t.Fatal(fmt.Sprintf("column must be empty, got %s \n", col))
+		t.Fatalf("column must be empty, got %s \n", col)
 	}
 	if val != "" {
-		t.Fatal(fmt.Sprintf("value must be empty, got %s \n", val))
+		t.Fatalf("value must be empty, got %s \n", val)
 	}
 }
 
@@ -69,10 +68,10 @@ func TestSeekMapped(t *testing.T) {
 		t.Fatal("should NOT have found the column")
 	}
 	if col != "" {
-		t.Fatal(fmt.Sprintf("column must be empty, got %s \n", col))
+		t.Fatalf("column must be empty, got %s \n", col)
 	}
 	if val != "" {
-		t.Fatal(fmt.Sprintf("value must be empty, got %s \n", val))
+		t.Fatalf("value must be empty, got %s \n", val)
 	}
 }
 
@@ -128,10 +127,10 @@ func TestMapper(t *testing.T) {
 func compare(t *testing.T, m *Mapper, col string, val string, wantedCol string, wantedVal string) {
 	fCol, fVal := getMappedData(m.Mapping, m.rules.toEvent, col, val)
 	if fCol != wantedCol {
-		t.Fatal(fmt.Sprintf("wrong column: wanted %s, got %s", wantedCol, fCol))
+		t.Fatalf("wrong column: wanted %s, got %s", wantedCol, fCol)
 	}
 	if fVal != wantedVal {
-		t.Fatal(fmt.Sprintf("wrong value: wanted %s, got %s", wantedVal, fVal))
+		t.Fatalf("wrong value: wanted %s, got %s", wantedVal, fVal)
 	}
 }
 
@@ -228,10 +227,10 @@ func TestTurnToShortColumn(t *testing.T) {
 		t.Fatal("should NOT have found the column")
 	}
 	if col != "" {
-		t.Fatal(fmt.Sprintf("column must be empty, got %s \n", col))
+		t.Fatalf("column must be empty, got %s \n", col)
 	}
 	if val != "" {
-		t.Fatal(fmt.Sprintf("value must be empty, got %s \n", val))
+		t.Fatalf("value must be empty, got %s \n", val)
 	}
 }
 
@@ -265,10 +264,10 @@ func TestTurnToMappedColumnValue(t *testing.T) {
 		t.Fatal("should NOT have found the column")
 	}
 	if col != "" {
-		t.Fatal(fmt.Sprintf("column must be empty, got %s \n", col))
+		t.Fatalf("column must be empty, got %s \n", col)
 	}
 	if val != "" {
-		t.Fatal(fmt.Sprintf("value must be empty, got %s \n", val))
+		t.Fatalf("value must be empty, got %s \n", val)
 	}
 }
 
