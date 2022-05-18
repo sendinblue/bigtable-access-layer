@@ -52,7 +52,32 @@ This method takes a row key as an argument, uses its internal adapter to read th
 parses all cells contained in the row to turn it into a map of data.Event and finally returns the data.Set that contains all the events.
 */
 func (r *Repository) Read(ctx context.Context, key string) (*data.Set, error) {
-	row, err := r.adapter.ReadRow(ctx, key)
+	return r.read(ctx, key)
+}
+
+/*
+ReadFamily reads a row from the repository keeping only the desired column family and map it to a data.Set
+
+This method takes a row key and the column family as an argument, uses its internal adapter to read the row from Big Table,
+parses all cells contained in the row to turn it into a map of data.Event and finally returns the data.Set that contains all the events.
+
+Be careful, this method will perform an exact match on the column family name.
+*/
+func (r *Repository) ReadFamily(ctx context.Context, key string, family string) (*data.Set, error) {
+	familyFilter := bigtable.RowFilter(bigtable.FamilyFilter(family))
+	return r.read(ctx, key, familyFilter)
+}
+
+// ReadLast reads a row from the repository while returning only the latest cell values after
+// mapping it to a data.Set. This method takes a row key as an argument, uses its internal adapter
+// to read the row from Big Table, parses only the latest cells contained in the row to turn it into
+// a map of data.Event and finally returns the data.Set that contains all the events.
+func (r *Repository) ReadLast(ctx context.Context, key string) (*data.Set, error) {
+	return r.read(ctx, key, bigtable.RowFilter(bigtable.LatestNFilter(1)))
+}
+
+func (r *Repository) read(ctx context.Context, key string, opts ...bigtable.ReadOption) (*data.Set, error) {
+	row, err := r.adapter.ReadRow(ctx, key, opts...)
 	if err != nil {
 		return nil, err
 	}
