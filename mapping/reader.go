@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/pkg/errors"
 )
 
 type Reader struct {
@@ -14,27 +13,33 @@ type Reader struct {
 }
 
 func NewReader(gcreds *GcloudCreds, bucketName string) (*Reader, *storage.Client, error) {
-	gb, gbClient, err := newGCSBucketGetter(gcreds, bucketName)
+	gb, gbClient, err := NewGCSBucketGetter(gcreds, bucketName)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "new gcs bucket")
+		return nil, nil, err
 	}
 	return &Reader{
 		readerBucket: gb.GetStorageReader,
 	}, gbClient, nil
 }
 
-func (r *Reader) Load(ctx context.Context, eventFamily string, version string) (*Mapping, error) {
+func newReaderFromGCSClient(gbSL func(ctx context.Context, fileName string) (io.ReadCloser, error)) *Reader {
+	return &Reader{
+		readerBucket: gbSL,
+	}
+}
+
+func (r *Reader) Load(ctx context.Context, eventFamily string, version string, environment string) (*Mapping, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 	defer cancel()
-	filename := getMappingFilename(eventFamily, version)
+	filename := getMappingFilename(eventFamily, version, environment)
 	reader, err := r.readerBucket(ctx, filename)
 	if err != nil {
-		return nil, errors.Wrap(err, "get storage reader")
+		return nil, err
 	}
 	m, err := LoadMappingIO(reader)
 	err = reader.Close()
 	if err != nil {
-		return nil, errors.Wrap(err, "close reader")
+		return nil, err
 	}
 	return m, nil
 }

@@ -4,10 +4,11 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc/credentials/insecure"
 
 	"cloud.google.com/go/bigtable"
 	"cloud.google.com/go/bigtable/bttest"

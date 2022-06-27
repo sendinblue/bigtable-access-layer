@@ -30,16 +30,29 @@ type gcsBucketGetter struct {
 	}
 }
 
-func newGCSBucketGetter(gcreds *GcloudCreds, bucketName string) (*gcsBucketGetter, *storage.Client, error) {
+func NewGCSBucketGetter(gcreds *GcloudCreds, bucketName string) (*gcsBucketGetter, *storage.Client, error) {
 	credsB, err := json.Marshal(gcreds)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "json marshal")
 	}
+
 	client, err := storage.NewClient(context.Background(), option.WithCredentialsJSON(credsB))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "gcs storage client")
 	}
 	return &gcsBucketGetter{objectGetter: client.Bucket(bucketName)}, client, nil
+}
+
+func NewGCSBucketGetterFromEnvironment(bucketName string) (*gcsBucketGetter, *storage.Client, error) {
+	client, err := storage.NewClient(context.Background())
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "gcs storage client")
+	}
+	return &gcsBucketGetter{objectGetter: client.Bucket(bucketName)}, client, nil
+}
+
+func NewGCSBucketGetterWithClient(client *storage.Client, bucketName string) (*gcsBucketGetter, error) {
+	return &gcsBucketGetter{objectGetter: client.Bucket(bucketName)}, nil
 }
 
 // GetStorageWriter returns the storage writer for google cloud storage.
@@ -52,7 +65,7 @@ func (r *gcsBucketGetter) GetStorageReader(ctx context.Context, fileName string)
 	return r.objectGetter.Object(fileName).NewReader(ctx)
 }
 
-func getMappingFilename(eventFamily string, version string) string {
+func getMappingFilename(eventFamily string, version string, environment string) string {
 	// event_family/v1.0.0.json
-	return fmt.Sprintf("%s/%s.json", eventFamily, version)
+	return fmt.Sprintf("%s/%s/%s.json", eventFamily, environment, version)
 }

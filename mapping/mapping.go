@@ -87,6 +87,21 @@ func LoadMapping(c []byte) (*Mapping, error) {
 	return m, nil
 }
 
+// LoadMappingVersion loads a mapping from a slice of bytes and its version.
+// You can use this function if you prefer to open the mapping file yourself.
+func LoadMappingVersion(c []byte, version string) (*Mapping, error) {
+	mv := map[string]*Mapping{}
+	err := json.Unmarshal(c, &mv)
+	if err != nil {
+		return nil, err
+	}
+	m, ok := mv[version]
+	if !ok {
+
+	}
+	return m, nil
+}
+
 // LoadMappingIO loads a mapping from a IO reader.
 func LoadMappingIO(reader io.ReadCloser) (*Mapping, error) {
 	m := &Mapping{}
