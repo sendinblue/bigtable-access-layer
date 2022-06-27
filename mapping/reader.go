@@ -9,21 +9,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-type reader struct {
+type Reader struct {
 	readerBucket func(ctx context.Context, fileName string) (io.ReadCloser, error)
 }
 
-func NewReader(gcreds *GcloudCreds, bucketName string) (*reader, *storage.Client, error) {
+func NewReader(gcreds *GcloudCreds, bucketName string) (*Reader, *storage.Client, error) {
 	gb, gbClient, err := newGCSBucketGetter(gcreds, bucketName)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "new gcs bucket")
 	}
-	return &reader{
+	return &Reader{
 		readerBucket: gb.GetStorageReader,
 	}, gbClient, nil
 }
 
-func (r *reader) load(ctx context.Context, eventFamily string, version string) (*Mapping, error) {
+func (r *Reader) Load(ctx context.Context, eventFamily string, version string) (*Mapping, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 	defer cancel()
 	filename := getMappingFilename(eventFamily, version)
