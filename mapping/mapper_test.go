@@ -119,12 +119,12 @@ func TestMapper(t *testing.T) {
 		t.Fatal("should not raise an error")
 	}
 	mapper := NewMapper(mapping)
-	compare(t, mapper, "ui", "1233", "user_id", "1233")
-	compare(t, mapper, "oi", "1", "is_opted_in", "true")
-	compare(t, mapper, "3", "1", "order_status", "processing")
+	compareMappedData(t, mapper, "ui", "1233", "user_id", "1233")
+	compareMappedData(t, mapper, "oi", "1", "is_opted_in", "true")
+	compareMappedData(t, mapper, "3", "1", "order_status", "processing")
 }
 
-func compare(t *testing.T, m *Mapper, col string, val string, wantedCol string, wantedVal string) {
+func compareMappedData(t *testing.T, m *Mapper, col string, val string, wantedCol string, wantedVal string) {
 	fCol, fVal := getMappedData(m.Mapping, m.rules.toEvent, col, val)
 	if fCol != wantedCol {
 		t.Fatalf("wrong column: wanted %s, got %s", wantedCol, fCol)
