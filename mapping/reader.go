@@ -37,6 +37,9 @@ func (r *Reader) Load(ctx context.Context, eventFamily string, version string, e
 		return nil, err
 	}
 	m, err := LoadMappingIO(reader)
+	if err != nil {
+		return nil, err
+	}
 	err = reader.Close()
 	if err != nil {
 		return nil, err
