@@ -9,10 +9,8 @@
         "1": "Smartphone",
         "2": "Computer"
       }
-    }
-  },
-  "reversed": [
-    {
+    },
+    "e": {
       "name": "event_type",
       "values": {
         "11": "page_view",
@@ -20,5 +18,5 @@
         "13": "purchase"
       }
     }
-  ]
+  }
 }
