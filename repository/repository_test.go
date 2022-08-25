@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
+	"regexp"
+	"strconv"
 	"testing"
 	"time"
 
@@ -118,12 +120,15 @@ func ExampleRepository_Write() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	fmt.Println("cells-for_contact-101")
 	for _, family := range row {
 		for _, cell := range family {
 			fmt.Println(cell.Column, string(cell.Value))
 		}
 	}
 
+	fmt.Println("cells-for_contact-102")
 	row, err = tbl.ReadRow(ctx, "contact-102")
 	if err != nil {
 		log.Fatalln(err)
@@ -138,6 +143,7 @@ func ExampleRepository_Write() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	fmt.Println("mapped-event-for_contact-102")
 	for _, event := range readSet.Events["front"] {
 		fmt.Println(event.Date.UTC())
 		fmt.Println(event.RowKey)
@@ -145,18 +151,21 @@ func ExampleRepository_Write() {
 		fmt.Println(event.Cells["device_type"])
 	}
 	// Output:
-	// front:11 1
-	// front:12 1
-	// front:13 1
-	// front:d 1
-	// front:d 1
-	// front:d 1
+	// cells-for_contact-101
+	// front:d s
+	// front:d s
+	// front:d s
+	// front:e 13
+	// front:e 12
+	// front:e 11
 	// front:u https://example.org/some/product
 	// front:u https://example.org/some/product
 	// front:u https://example.org/some/product
-	// front:12 1
-	// front:d 2
+	// cells-for_contact-102
+	// front:d c
+	// front:e 12
 	// front:u https://example.org/some/product
+	// mapped-event-for_contact-102
 	// 2018-01-01 00:02:00 +0000 UTC
 	// contact-102
 	// add_to_cart
@@ -239,7 +248,7 @@ func ExampleRepository_Search() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	events := sortByDate(readSet.Events["front"])
+	events := sortByContactID(readSet.Events["front"])
 	for _, event := range events {
 		fmt.Println(event.Date.UTC())
 		fmt.Println(event.RowKey)
@@ -248,9 +257,9 @@ func ExampleRepository_Search() {
 	}
 
 	// Output:
-	// 2018-01-01 00:00:00 +0000 UTC
+	// 2018-01-01 00:02:00 +0000 UTC
 	// contactx-101
-	// page_view
+	// purchase
 	// Smartphone
 	// 2018-01-01 00:02:00 +0000 UTC
 	// contactx-102
@@ -258,10 +267,12 @@ func ExampleRepository_Search() {
 	// Computer
 }
 
-func sortByDate(events []*data.Event) []*data.Event {
+func sortByContactID(events []*data.Event) []*data.Event {
 	for i := 0; i < len(events); i++ {
+		iID := extractID(events[i].RowKey)
 		for j := 0; j < len(events); j++ {
-			if events[i].Date.Unix() < events[j].Date.Unix() {
+			jID := extractID(events[j].RowKey)
+			if iID < jID {
 				perm := events[j]
 				events[j] = events[i]
 				events[i] = perm
@@ -269,6 +280,29 @@ func sortByDate(events []*data.Event) []*data.Event {
 		}
 	}
 	return events
+}
+
+func TestExtractID(t *testing.T) {
+	l := "contact-113"
+	i := extractID(l)
+	if i != 113 {
+		t.Fatalf("unexpected value: %+v", i)
+	}
+}
+
+func extractID(literalID string) int {
+	re := regexp.MustCompile("[0-9]+")
+	m := re.FindAllString(literalID, 1)
+	out := 0
+	for _, f := range m {
+		i, err := strconv.Atoi(f)
+		if err != nil {
+			log.Fatalln(err)
+			return out
+		}
+		out = i
+	}
+	return out
 }
 
 func ExampleRepository_ReadLast() {
@@ -339,9 +373,8 @@ func ExampleRepository_ReadLast() {
 		fmt.Println(event.Cells["event_type"])
 		fmt.Println(event.Cells["device_type"])
 	}
+
 	// Output:
-	// add_to_cart
-	//
 	// purchase
 	// Smartphone
 }
@@ -647,19 +680,19 @@ func getRows() []bigtable.Row {
 				{
 					Row:       "contact-3",
 					Column:    "d",
-					Value:     []byte("1"),
+					Value:     []byte("s"),
 					Timestamp: t1,
 				},
 				{
 					Row:       "contact-3",
 					Column:    "d",
-					Value:     []byte("1"),
+					Value:     []byte("s"),
 					Timestamp: t2,
 				},
 				{
 					Row:       "contact-3",
 					Column:    "d",
-					Value:     []byte("1"),
+					Value:     []byte("s"),
 					Timestamp: t3,
 				},
 			},
@@ -680,13 +713,13 @@ func (a mockAdapter) ReadRow(_ context.Context, row string, _ ...bigtable.ReadOp
 				Row:       row,
 				Column:    "d",
 				Timestamp: t1,
-				Value:     []byte("1"),
+				Value:     []byte("s"),
 			},
 			{
 				Row:       row,
-				Column:    "11",
+				Column:    "e",
 				Timestamp: t1,
-				Value:     []byte("1"),
+				Value:     []byte("11"),
 			},
 			{
 				Row:       row,
@@ -698,13 +731,13 @@ func (a mockAdapter) ReadRow(_ context.Context, row string, _ ...bigtable.ReadOp
 				Row:       row,
 				Column:    "d",
 				Timestamp: t2,
-				Value:     []byte("1"),
+				Value:     []byte("s"),
 			},
 			{
 				Row:       row,
-				Column:    "12",
+				Column:    "e",
 				Timestamp: t2,
-				Value:     []byte("1"),
+				Value:     []byte("12"),
 			},
 			{
 				Row:       row,
@@ -720,9 +753,9 @@ func (a mockAdapter) ReadRow(_ context.Context, row string, _ ...bigtable.ReadOp
 			},
 			{
 				Row:       row,
-				Column:    "13",
+				Column:    "e",
 				Timestamp: t3,
-				Value:     []byte("1"),
+				Value:     []byte("13"),
 			},
 		},
 	}
@@ -792,11 +825,11 @@ func generateMutations(numEvents int) []*bigtable.Mutation {
 		mut.Set("front", "u", t, []byte(fmt.Sprintf("https://www.example.com/products/%d", mod)))
 		switch mod {
 		case 1, 2:
-			mut.Set("front", "12", t, []byte("1"))
+			mut.Set("front", "e", t, []byte("12"))
 		case 3:
-			mut.Set("front", "13", t, []byte("1"))
+			mut.Set("front", "e", t, []byte("13"))
 		default:
-			mut.Set("front", "11", t, []byte("1"))
+			mut.Set("front", "e", t, []byte("11"))
 		}
 		mut.Set("front", "d", t, []byte(fmt.Sprintf("%d", 1+(i%2))))
 		data = append(data, mut)
