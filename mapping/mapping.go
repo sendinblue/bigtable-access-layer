@@ -53,6 +53,7 @@ package mapping
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -97,7 +98,7 @@ func LoadMappingVersion(c []byte, version string) (*Mapping, error) {
 	}
 	m, ok := mv[version]
 	if !ok {
-
+		return nil, errors.New(fmt.Sprintf("no mapping found for version %s", version))
 	}
 	return m, nil
 }
