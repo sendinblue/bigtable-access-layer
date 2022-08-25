@@ -152,9 +152,9 @@ func ExampleRepository_Write() {
 	}
 	// Output:
 	// cells-for_contact-101
-	// front:d s
-	// front:d s
-	// front:d s
+	// front:d 1
+	// front:d 1
+	// front:d 1
 	// front:e 13
 	// front:e 12
 	// front:e 11
@@ -162,7 +162,7 @@ func ExampleRepository_Write() {
 	// front:u https://example.org/some/product
 	// front:u https://example.org/some/product
 	// cells-for_contact-102
-	// front:d c
+	// front:d 2
 	// front:e 12
 	// front:u https://example.org/some/product
 	// mapped-event-for_contact-102
@@ -680,19 +680,19 @@ func getRows() []bigtable.Row {
 				{
 					Row:       "contact-3",
 					Column:    "d",
-					Value:     []byte("s"),
+					Value:     []byte("1"),
 					Timestamp: t1,
 				},
 				{
 					Row:       "contact-3",
 					Column:    "d",
-					Value:     []byte("s"),
+					Value:     []byte("1"),
 					Timestamp: t2,
 				},
 				{
 					Row:       "contact-3",
 					Column:    "d",
-					Value:     []byte("s"),
+					Value:     []byte("1"),
 					Timestamp: t3,
 				},
 			},
@@ -713,7 +713,7 @@ func (a mockAdapter) ReadRow(_ context.Context, row string, _ ...bigtable.ReadOp
 				Row:       row,
 				Column:    "d",
 				Timestamp: t1,
-				Value:     []byte("s"),
+				Value:     []byte("1"),
 			},
 			{
 				Row:       row,
@@ -731,7 +731,7 @@ func (a mockAdapter) ReadRow(_ context.Context, row string, _ ...bigtable.ReadOp
 				Row:       row,
 				Column:    "d",
 				Timestamp: t2,
-				Value:     []byte("s"),
+				Value:     []byte("1"),
 			},
 			{
 				Row:       row,

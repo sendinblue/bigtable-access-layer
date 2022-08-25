@@ -6,8 +6,8 @@
     "d": {
       "name": "device_type",
       "values": {
-        "s": "Smartphone",
-        "c": "Computer"
+        "1": "Smartphone",
+        "2": "Computer"
       }
     },
     "e": {
