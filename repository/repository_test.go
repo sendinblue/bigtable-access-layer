@@ -239,7 +239,8 @@ func ExampleRepository_Search() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	for _, event := range readSet.Events["front"] {
+	events := sortByDate(readSet.Events["front"])
+	for _, event := range events {
 		fmt.Println(event.Date.UTC())
 		fmt.Println(event.RowKey)
 		fmt.Println(event.Cells["event_type"])
@@ -255,6 +256,19 @@ func ExampleRepository_Search() {
 	// contactx-102
 	// add_to_cart
 	// Computer
+}
+
+func sortByDate(events []*data.Event) []*data.Event {
+	for i := 0; i < len(events); i++ {
+		for j := 0; j < len(events); j++ {
+			if events[i].Date.Unix() < events[j].Date.Unix() {
+				perm := events[j]
+				events[j] = events[i]
+				events[i] = perm
+			}
+		}
+	}
+	return events
 }
 
 func ExampleRepository_ReadLast() {
