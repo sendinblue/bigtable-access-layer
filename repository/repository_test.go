@@ -824,7 +824,7 @@ func generateMutations(numEvents int) []*bigtable.Mutation {
 		t := bigtable.Time(time.Now().Add(-time.Duration(i) * time.Minute))
 		mut.Set("front", "u", t, []byte(fmt.Sprintf("https://www.example.com/products/%d", mod)))
 		switch mod {
-		case 1, 2:
+		case 2:
 			mut.Set("front", "e", t, []byte("12"))
 		case 3:
 			mut.Set("front", "e", t, []byte("13"))
