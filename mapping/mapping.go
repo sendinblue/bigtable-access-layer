@@ -1,6 +1,6 @@
 /*
 Package mapping provides the API to convert data coming from Big Table into a data.Set.
- */
+*/
 /*
 The mapping system is based on a set of rules described inside a JSON mapping file, here's an example:
 	{
@@ -48,13 +48,17 @@ The mapping system will map it to a new data.Event containing the following data
       "is_opted_in": "true",
       "order_status": "processing"
     }
- */
+*/
 package mapping
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 // Mapping describes the mapping between data stored in Big Table and its human-readable representation.
@@ -80,6 +84,32 @@ func LoadMapping(c []byte) (*Mapping, error) {
 	err := json.Unmarshal(c, &m)
 	if err != nil {
 		return nil, err
+	}
+	return m, nil
+}
+
+// LoadMappingVersion loads a mapping from a slice of bytes and its version.
+// You can use this function if you prefer to open the mapping file yourself.
+func LoadMappingVersion(c []byte, version string) (*Mapping, error) {
+	mv := map[string]*Mapping{}
+	err := json.Unmarshal(c, &mv)
+	if err != nil {
+		return nil, err
+	}
+	m, ok := mv[version]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("no mapping found for version %s", version))
+	}
+	return m, nil
+}
+
+// LoadMappingIO loads a mapping from a IO reader.
+func LoadMappingIO(reader io.ReadCloser) (*Mapping, error) {
+	m := &Mapping{}
+	decoder := json.NewDecoder(reader)
+	err := decoder.Decode(&m)
+	if err != nil {
+		return nil, errors.Wrap(err, "decode mapping")
 	}
 	return m, nil
 }

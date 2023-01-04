@@ -4,6 +4,10 @@ go 1.17
 
 require (
 	cloud.google.com/go/bigtable v1.13.0
+	cloud.google.com/go/storage v1.10.0
+	github.com/davecgh/go-spew v1.1.0
+	github.com/pierrre/compare v1.0.2
+	github.com/pkg/errors v0.9.1
 	google.golang.org/api v0.70.0
 	google.golang.org/grpc v1.44.0
 )
