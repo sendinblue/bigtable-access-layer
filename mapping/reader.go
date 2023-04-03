@@ -46,3 +46,21 @@ func (r *Reader) Load(ctx context.Context, eventFamily string, version string, e
 	}
 	return m, nil
 }
+
+func (r *Reader) LoadFromPath(ctx context.Context, path string) (*Mapping, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
+	defer cancel()
+	reader, err := r.readerBucket(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	m, err := LoadMappingIO(reader)
+	if err != nil {
+		return nil, err
+	}
+	err = reader.Close()
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
