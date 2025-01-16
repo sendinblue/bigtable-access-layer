@@ -76,6 +76,18 @@ func (r *Repository) ReadLast(ctx context.Context, key string) (*data.Set, error
 	return r.read(ctx, key, bigtable.RowFilter(bigtable.LatestNFilter(1)))
 }
 
+// ReadRow reads a row from the repository while returning the cell values after
+// mapping it to a data.Set. This method takes a row key as an argument, uses its internal adapter
+// to read the row from Big Table, parses only the cells contained in the row to turn it into
+// a map of data.Event and finally returns the data.Set that contains all the events.
+func (r *Repository) ReadRow(ctx context.Context, key string, opts ...bigtable.ReadOption) (*data.Set, error) {
+	row, err := r.adapter.ReadRow(ctx, key, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return buildEventSet([]bigtable.Row{row}, r.mapper), nil
+}
+
 func (r *Repository) read(ctx context.Context, key string, opts ...bigtable.ReadOption) (*data.Set, error) {
 	row, err := r.adapter.ReadRow(ctx, key, opts...)
 	if err != nil {
